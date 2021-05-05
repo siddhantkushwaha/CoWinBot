@@ -163,6 +163,8 @@ def fetch(all_req):
     pincodes = get_all_pincodes(all_req)
 
     for pincode in pincodes:
+        print(f'for {pincode}')
+
         url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
               f'public/calendarByPin?pincode={pincode}&date={date_today}'
 
