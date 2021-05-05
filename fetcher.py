@@ -6,7 +6,7 @@ from datetime import datetime
 import requests
 
 from params import data_dir, requests_dir
-from util import load_request, delete_request
+from util import load_request, delete_request, load_pincode_set
 
 
 def fetch_latest_timestamp():
@@ -146,10 +146,13 @@ def parse_requests():
 
 
 def get_all_pincodes(all_req):
+    valid_pincode_set = load_pincode_set()
     pincodes = set()
     for user_id, req in all_req.items():
         for i in req:
-            pincodes.add(i[0])
+            pincode = int(i[0])
+            if pincode in valid_pincode_set:
+                pincodes.add(pincode)
     return pincodes
 
 

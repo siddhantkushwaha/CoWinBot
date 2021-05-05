@@ -1,5 +1,8 @@
 import json
 import os
+import pickle
+
+from params import raw_data_dir
 
 
 def is_request_exists(user_request_path):
@@ -23,3 +26,29 @@ def save_request(user_request_path, user_request):
 def delete_request(user_request_path):
     if is_request_exists(user_request_path):
         os.remove(user_request_path)
+
+
+def save_pincode_set(pincode_set):
+    pt = os.path.join(raw_data_dir, 'pincode_set')
+    with open(pt, 'wb') as fp:
+        pickle.dump(pincode_set, fp)
+
+
+def load_pincode_set():
+    pt = os.path.join(raw_data_dir, 'pincode_set')
+    with open(pt, 'rb') as fp:
+        pincode_set = pickle.load(fp)
+    return pincode_set
+
+
+def save_pincode_dic(pincode_dic):
+    pt = os.path.join(raw_data_dir, 'pincode_dic')
+    with open(pt, 'wb') as fp:
+        pickle.dump(pincode_dic, fp)
+
+
+def load_pincode_dic():
+    pt = os.path.join(raw_data_dir, 'pincode_dic')
+    with open(pt, 'rb') as fp:
+        pincode_dic = pickle.load(fp)
+    return pincode_dic

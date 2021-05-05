@@ -9,3 +9,5 @@ os.makedirs(requests_dir, exist_ok=True)
 
 data_dir = 'data/cowin'
 os.makedirs(data_dir, exist_ok=True)
+
+raw_data_dir = 'rawData'

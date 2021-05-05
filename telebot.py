@@ -7,9 +7,12 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 from fetcher import check_slot_get_response
 from params import requests_dir, token
-from util import load_request, save_request, delete_request, is_request_exists
+from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic
 
 bot_name = 'vaccinecowinbot'
+
+pin_code_set = load_pincode_set()
+pin_code_dic = load_pincode_dic()
 
 
 def send_message(user_id, message):
@@ -48,32 +51,41 @@ def text_commands(update, context):
             if not pincode.isnumeric():
                 invalid_input = True
 
-            if not age.isnumeric() or int(age) < 1 or int(age) > 110:
+            elif not age.isnumeric() or int(age) < 1 or int(age) > 110:
                 invalid_input = True
 
             if invalid_input:
                 response = 'Please check if pin-code and age provided are correct.'
-
             else:
-                user_request = load_request(user_request_path)
+                pincode = int(pincode)
+                is_pincode_valid = pincode in pin_code_set
+                if not is_pincode_valid:
+                    response = f"Can't locate pincode, try again."
+                else:
+                    pincode_info = pin_code_dic[pincode]
+                    response = f"Pincode found for area: {pincode_info['Taluk']}, {pincode_info['divisionname']}, {pincode_info['circlename']}."
+                    # Sending two messages here, this is not good idea to do everywhere
+                    context.bot.send_message(chat_id=user_id, text=response)
 
-                user_request_set = set(user_request.get('request', []))
-                user_request_set.add(f'{pincode}_{age}')
+                    user_request = load_request(user_request_path)
 
-                user_request['request'] = list(user_request_set)
-                save_request(user_request_path, user_request)
+                    user_request_set = set(user_request.get('request', []))
+                    user_request_set.add(f'{pincode}_{age}')
 
-                response = f'Your request has been registered. ' \
-                           f'You will be notified when vaccine is available in area with ' \
-                           f'pincode {pincode} for {age} year olds.'
+                    user_request['request'] = list(user_request_set)
+                    save_request(user_request_path, user_request)
 
-                # Sending two messages here, this is not idea to do everywhere
-                context.bot.send_message(chat_id=user_id, text=response)
+                    response = f'Your request has been registered. ' \
+                               f'You will be notified when vaccine is available in area with ' \
+                               f'pincode {pincode} for {age} year olds.'
 
-                response = check_slot_get_response(pincode, age)
-                for res in response:
-                    context.bot.send_message(chat_id=user_id, text=res)
-                    time.sleep(1)
+                    # Sending two messages here, this is not good idea to do everywhere
+                    context.bot.send_message(chat_id=user_id, text=response)
+
+                    response = check_slot_get_response(pincode, age)
+                    for res in response:
+                        context.bot.send_message(chat_id=user_id, text=res)
+                        time.sleep(1)
 
     elif command_type == 'stop':
         if is_request_exists(user_request_path):
