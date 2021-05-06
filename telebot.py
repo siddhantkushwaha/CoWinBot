@@ -25,7 +25,8 @@ def start(update, context):
     start_text = "Hi! This bot helps check if any slot is available for vaccination for given area, given age. " \
                  "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
                  "\n\nTo list all requests registered by you, send command 'list'. " \
-                 "\n\nTo stop getting notifications, send command 'stop'."
+                 "\n\nTo stop getting notifications, send command 'stop'." \
+                 "\n\nReport issues as k16.siddhant@gmail.com"
     context.bot.send_message(chat_id=update.effective_chat.id, text=start_text)
 
 
