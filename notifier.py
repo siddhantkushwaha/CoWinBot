@@ -32,7 +32,7 @@ def send_notifications(all_req):
                 print(f'For {user_id}, {pincode}, {age}, slots NOT found: {response}')
 
                 notification_type = 'negative'
-                message = f"No slots available in pincode area {pincode}, for {age} year olds.'"
+                message = f"No slots available in pincode area {pincode}, for {age} year olds."
 
             notify = False
             notification_state_key = f'{pincode}_{age}'
