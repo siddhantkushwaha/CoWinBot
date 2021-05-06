@@ -26,7 +26,7 @@ def start(update, context):
                  "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
                  "\n\nTo list all requests registered by you, send command 'list'. " \
                  "\n\nTo stop getting notifications, send command 'stop'." \
-                 "\n\nReport issues as k16.siddhant@gmail.com"
+                 "\n\nReport issues at k16.siddhant@gmail.com"
     context.bot.send_message(chat_id=update.effective_chat.id, text=start_text)
 
 
