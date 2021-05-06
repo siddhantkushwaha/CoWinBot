@@ -112,7 +112,7 @@ def check_slot_get_response(pincode, age):
                     center_string += session_string
 
             if sessions_with_availability == 0:
-                center_string = "Has no slots." + center_string
+                center_string = "All appointments are booked for this center." + center_string
 
             center_string = center_string.strip()
             response.append(center_string)
