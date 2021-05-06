@@ -120,7 +120,7 @@ def check_slot_get_response(pincode, age):
     return response
 
 
-def parse_requests():
+def parse_pincode_age_requests():
     all_req = {}
 
     for req_file in os.listdir(requests_dir):

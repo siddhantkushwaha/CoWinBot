@@ -2,7 +2,7 @@ import json
 import os
 import pickle
 
-from params import raw_data_dir
+from params import raw_data_dir, notification_state_dir
 
 
 def is_request_exists(user_request_path):
@@ -52,3 +52,24 @@ def load_pincode_dic():
     with open(pt, 'rb') as fp:
         pincode_dic = pickle.load(fp)
     return pincode_dic
+
+
+def is_notification_state_exists(user_id):
+    pt = os.path.join(notification_state_dir, f"{user_id}.pickle")
+    return os.path.exists(pt)
+
+
+def load_notification_state(user_id):
+    pt = os.path.join(notification_state_dir, f"{user_id}.pickle")
+    notification_state = {}
+    if is_notification_state_exists(user_id):
+        with open(pt, 'rb') as fp:
+            notification_state = pickle.load(fp)
+
+    return notification_state
+
+
+def save_notification_state(user_id, notification_state):
+    pt = os.path.join(notification_state_dir, f"{user_id}.pickle")
+    with open(pt, 'wb') as fp:
+        pickle.dump(notification_state, fp)

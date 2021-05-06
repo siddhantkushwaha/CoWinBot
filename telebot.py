@@ -86,7 +86,7 @@ def text_commands(update, context):
                     response = check_slot_get_response(pincode, age)
                     for res in response:
                         context.bot.send_message(chat_id=user_id, text=res)
-                        time.sleep(1)
+                        time.sleep(2)
 
     elif command_type == 'stop':
         if is_request_exists(user_request_path):
