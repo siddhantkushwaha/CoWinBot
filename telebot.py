@@ -24,6 +24,7 @@ def send_message(user_id, message):
 def start(update, context):
     start_text = "Hi! This bot helps check if any slot is available for vaccination for given area, given age. " \
                  "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
+                 "\n\nTo list all requests registered by you, send command 'list'. " \
                  "\n\nTo stop getting notifications, send command 'stop'."
     context.bot.send_message(chat_id=update.effective_chat.id, text=start_text)
 
@@ -93,6 +94,17 @@ def text_commands(update, context):
             response = 'You will not receive notifications.'
         else:
             response = 'You were not subscribed to notifications.'
+    elif command_type == 'list':
+        if is_request_exists(user_request_path):
+            user_request = load_request(user_request_path)
+            user_request_set = [i.split('_') for i in set(user_request.get('request', []))]
+            user_request_tuple_set = [(i[0], i[1]) for i in user_request_set]
+            response = ''
+            for i, val in enumerate(user_request_tuple_set, 1):
+                response += f"\n\n{i}. Pincode: {val[0]}, Age: {val[1]}"
+            response = response.strip()
+        else:
+            response = 'You have no registered requests'
     else:
         response = 'Invalid command. Use /start to see valid commands.'
 

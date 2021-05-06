@@ -10,7 +10,7 @@ def send_notifications(all_req, notify=False):
             timestamp, response = check_slots_available(i[0], i[1])
             if response is not None and len(response) > 0:
 
-                print(f'Qualified response: {response}')
+                print(f'For {user_id}, {i[0]}, {i[1]}, qualified response: {response}')
 
                 if notify:
                     print(f'Notifying user: {user_id}')
@@ -23,7 +23,7 @@ def send_notifications(all_req, notify=False):
 def run(i):
     all_req = parse_requests()
 
-    if i > 0:
+    if i >= 0:
         print('Fetching results.')
         fetch(all_req)
 

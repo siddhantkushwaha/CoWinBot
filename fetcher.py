@@ -168,7 +168,12 @@ def fetch(all_req):
         url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
               f'public/calendarByPin?pincode={pincode}&date={date_today}'
 
-        response = requests.get(url)
+        print(f'Fetching from: {url}')
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+        response = requests.get(url, headers=headers)
+
         if response.status_code != 200:
             raise Exception('Failed to fetch data.')
 
