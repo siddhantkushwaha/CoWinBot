@@ -53,6 +53,8 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                     # send positive notifications repeatedly not closer than 6 hours
                     if time_diff.seconds > min_time_diff_btw_pos:
                         notify = True
+                else:
+                    notify = True
             else:
                 notify = True
 

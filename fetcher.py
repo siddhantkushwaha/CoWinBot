@@ -96,13 +96,16 @@ def check_slot_get_response(pincode, age):
     timestamp_str = timestamp.strftime('%d-%m-%Y %I:%M %p')
 
     if slots is None:
-        response[
-            0] = f'Information for this pincode not available as of {timestamp_str}. Your request has been registered, ' \
-                 'please wait for some time while we fetch information requested by you.'
+        response_type = 'none'
+        response[0] = f'Information for this pincode not available as of {timestamp_str}. ' \
+                      f'Your request has been registered, please wait for some time while we fetch ' \
+                      f'information requested by you.'
     elif len(slots) == 0:
+        response_type = 'negative'
         response[0] = f'No slots in this pincode available as of {timestamp_str}. Your request has been registered, ' \
                       'Notification will be sent when slot is available.'
     else:
+        response_type = 'positive'
         response = []
         for center_name, values in slots.items():
             center_string = f"\n\n{values['name']}, {values['address']}, {values['block']}, " \
@@ -129,7 +132,7 @@ def check_slot_get_response(pincode, age):
             center_string = center_string.strip()
             response.append(center_string)
 
-    return response
+    return response_type, response
 
 
 def parse_pincode_age_requests():

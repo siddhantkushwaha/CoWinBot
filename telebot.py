@@ -1,13 +1,15 @@
 import logging
 import os.path
 import time
+from datetime import datetime
 
 import requests
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 from fetcher import check_slot_get_response
 from params import requests_dir, token
-from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic
+from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
+    load_notification_state, save_notification_state
 
 bot_name = 'vaccinecowinbot'
 
@@ -84,10 +86,20 @@ def text_commands(update, context):
                     # Sending two messages here, this is not good idea to do everywhere
                     context.bot.send_message(chat_id=user_id, text=response)
 
-                    response = check_slot_get_response(pincode, age)
+                    response_type, response = check_slot_get_response(pincode, age)
                     for res in response:
                         context.bot.send_message(chat_id=user_id, text=res)
                         time.sleep(2)
+
+                    # Updating notification state for this user so that, notifier module doesn't send
+                    # notifications to this user immediately
+                    notification_state = load_notification_state(user_id)
+                    notification_state_key = f'{pincode}_{age}'
+                    notification_state[notification_state_key] = {
+                        "timestamp": datetime.now(),
+                        "type": response_type
+                    }
+                    save_notification_state(user_id, notification_state)
 
     elif command_type == 'stop':
         if is_request_exists(user_request_path):
