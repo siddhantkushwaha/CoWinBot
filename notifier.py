@@ -8,7 +8,7 @@ from util import load_pincode_set, load_notification_state, save_notification_st
 valid_pincode_set = load_pincode_set()
 
 
-def send_notifications(all_req):
+def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
     curr_time = datetime.now()
 
     for user_id, req in all_req.items():
@@ -45,13 +45,13 @@ def send_notifications(all_req):
                     notify = True
                 elif last_notification_type == 'negative' and notification_type == 'negative':
                     # send negative notifications repeatedly not closer than 24 hours
-                    if time_diff.seconds > 24 * 3600:
+                    if time_diff.seconds > min_time_diff_btw_neg:
                         notify = True
                 elif last_notification_type == 'positive' and notification_type == 'negative':
                     notify = True
                 elif last_notification_type == 'positive' and notification_type == 'positive':
                     # send positive notifications repeatedly not closer than 6 hours
-                    if time_diff.seconds > 6 * 3600:
+                    if time_diff.seconds > min_time_diff_btw_pos:
                         notify = True
             else:
                 notify = True

@@ -9,13 +9,25 @@ from params import data_dir, requests_dir
 from util import load_request, delete_request, load_pincode_set
 
 
-def fetch_latest_timestamp():
-    return int(max(map(lambda x: int(x.strip()), filter(lambda p: p.isnumeric(), os.listdir(data_dir)))))
+def get_path_for_pincode(pincode):
+    return os.path.join(data_dir, str(pincode))
+
+
+def fetch_latest_timestamp_pincode(pincode):
+    pincode_dir = get_path_for_pincode(pincode)
+    if not os.path.exists(pincode_dir):
+        return 0
+
+    li = os.listdir(pincode_dir)
+    li = filter(lambda p: p.endswith('.json'), li)
+    li = map(lambda p: int(p.replace('.json', '').strip()), li)
+
+    return max(li, default=0)
 
 
 def check_slots_available(pincode, age):
-    latest_timestamp = fetch_latest_timestamp()
-    data_by_pincode_path = os.path.join(data_dir, str(latest_timestamp), f'{pincode}.json')
+    latest_timestamp = fetch_latest_timestamp_pincode(pincode)
+    data_by_pincode_path = os.path.join(get_path_for_pincode(pincode), f'{latest_timestamp}.json')
 
     slots_data = {}
 
@@ -156,14 +168,21 @@ def get_all_pincodes(all_req):
     return pincodes
 
 
-def fetch(all_req):
-    timestamp = datetime.now()
-    date_today = timestamp.strftime('%d-%m-%Y')
-
+def fetch(all_req, min_time_diff_seconds):
     pincodes = get_all_pincodes(all_req)
-
     for pincode in pincodes:
-        print(f'for {pincode}')
+        print(f'For {pincode}')
+
+        curr_timestamp = datetime.now()
+        date_today = curr_timestamp.strftime('%d-%m-%Y')
+
+        last_timestamp = fetch_latest_timestamp_pincode(pincode)
+        last_timestamp = datetime.fromtimestamp(last_timestamp)
+
+        time_diff = curr_timestamp - last_timestamp
+        if time_diff.seconds < min_time_diff_seconds:
+            print(f'Skipping pincode, min time diff condition not met: {time_diff.seconds}.')
+            continue
 
         url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
               f'public/calendarByPin?pincode={pincode}&date={date_today}'
@@ -179,9 +198,9 @@ def fetch(all_req):
 
         data = json.loads(response.content)
 
-        pt = os.path.join(data_dir, timestamp.strftime('%s'))
+        pt = get_path_for_pincode(pincode)
         os.makedirs(pt, exist_ok=True)
-        with open(os.path.join(pt, f'{pincode}.json'), 'w') as fp:
+        with open(os.path.join(pt, f"{curr_timestamp.strftime('%s')}.json"), 'w') as fp:
             json.dump(data, fp)
 
         time.sleep(10)
