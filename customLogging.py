@@ -13,7 +13,7 @@ ERROR = logging.ERROR
 
 
 def get_logger(log_name=None, path='.', log_level=0):
-    log_format = '%(lineno)d %(asctime)s %(module)s %(funcName)s %(levelname)8s | %(message)s'
+    log_format = '%(lineno)10d %(asctime)s %(module)20s %(funcName)20s %(levelname)8s | %(message)s'
     log_date_format = '%Y/%m/%d %H:%M:%S'
 
     logging.basicConfig(
