@@ -39,51 +39,52 @@ def check_slots_available(pincode, age):
     if os.path.exists(data_by_pincode_path) and time_diff.total_seconds() < 24 * 3600:
         with open(data_by_pincode_path, 'r') as fp:
             data_by_pincode = json.load(fp)
-            for center in data_by_pincode['centers']:
-                name = center['name']
-                address = center['address']
-                state = center['state_name']
-                district = center['district_name']
-                block = center['block_name']
-                pin_code_in_data = center['pincode']
-                lat = center['lat']
-                long = center['long']
-                from_time = center['from']
-                to_time = center['to']
-                fee_type = center['fee_type']
 
-                for session in center['sessions']:
-                    date = session['date']
-                    min_age = session['min_age_limit']
-                    capacity = session['available_capacity']
-                    vaccine = session['vaccine']
-                    slots = session['slots']
+        for center in data_by_pincode['centers']:
+            name = center['name']
+            address = center['address']
+            state = center['state_name']
+            district = center['district_name']
+            block = center['block_name']
+            pin_code_in_data = center['pincode']
+            lat = center['lat']
+            long = center['long']
+            from_time = center['from']
+            to_time = center['to']
+            fee_type = center['fee_type']
 
-                    if min_age <= age:
-                        center_data = slots_data.get(name, {})
-                        slots_data[name] = {
-                            'name': name,
-                            'address': address,
-                            'block': block,
-                            'district': district,
-                            'state': state,
-                            'pincode': pin_code_in_data,
-                            'latlng': (lat, long),
-                            'from_time': from_time,
-                            'to_time': to_time,
-                            'fee_type': fee_type
-                        }
+            for session in center['sessions']:
+                date = session['date']
+                min_age = session['min_age_limit']
+                capacity = session['available_capacity']
+                vaccine = session['vaccine']
+                slots = session['slots']
 
-                        sessions = center_data.get('sessions', [])
-                        sessions.append({
-                            'date': date,
-                            'min_age': min_age,
-                            'capacity': capacity,
-                            'vaccine': vaccine,
-                            'slots': slots
-                        })
+                if min_age <= age:
+                    center_data = slots_data.get(name, {})
+                    slots_data[name] = {
+                        'name': name,
+                        'address': address,
+                        'block': block,
+                        'district': district,
+                        'state': state,
+                        'pincode': pin_code_in_data,
+                        'latlng': (lat, long),
+                        'from_time': from_time,
+                        'to_time': to_time,
+                        'fee_type': fee_type
+                    }
 
-                        slots_data[name]['sessions'] = sessions
+                    sessions = center_data.get('sessions', [])
+                    sessions.append({
+                        'date': date,
+                        'min_age': min_age,
+                        'capacity': capacity,
+                        'vaccine': vaccine,
+                        'slots': slots
+                    })
+
+                    slots_data[name]['sessions'] = sessions
 
         return latest_timestamp, slots_data
     else:
