@@ -1,20 +1,26 @@
-import logging
-import os.path
+import os
 import time
 from datetime import datetime
 
 import requests
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
+from customLogging import get_logger, INFO, DEBUG, DATA
 from fetcher import check_slot_get_response
 from params import requests_dir, token
 from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
     load_notification_state, save_notification_state
 
+logger = get_logger('telegram', log_level=5)
+
 bot_name = 'vaccinecowinbot'
 
 pin_code_set = load_pincode_set()
 pin_code_dic = load_pincode_dic()
+
+
+def log(user_id, level, message):
+    logger.log(level, f'{user_id} | {message}')
 
 
 def send_message(user_id, message):
@@ -24,19 +30,26 @@ def send_message(user_id, message):
 
 
 def start(update, context):
+    user_id = update.effective_chat.id
+
+    log(user_id, INFO, 'Start command received.')
+
     start_text = "Hi! This bot helps check if any slot is available for vaccination for given area, given age. " \
                  "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
                  "\n\nTo list all requests registered by you, send command 'list'. " \
                  "\n\nTo stop getting notifications, send command 'stop'." \
                  "\n\nReport issues at k16.siddhant@gmail.com"
-    context.bot.send_message(chat_id=update.effective_chat.id, text=start_text)
+    context.bot.send_message(chat_id=user_id, text=start_text)
 
 
 def text_commands(update, context):
     user_id = update.effective_chat.id
+    command_text = update.message.text
+
+    log(user_id, INFO, f'Text command [{command_text}] received.')
+
     user_request_path = os.path.join(requests_dir, f'{user_id}.json')
 
-    command_text = update.message.text
     command_text = command_text.strip().lower()
     command_args = command_text.split(' ')
 
@@ -60,11 +73,13 @@ def text_commands(update, context):
 
             if invalid_input:
                 response = 'Please check if pin-code and age provided are correct.'
+                log(user_id, DEBUG, f'Pincode [{pincode}] or age [{age}] is invalid.')
             else:
                 pincode = int(pincode)
                 is_pincode_valid = pincode in pin_code_set
                 if not is_pincode_valid:
                     response = f"Can't locate pincode, try again."
+                    log(user_id, DEBUG, f'Cannot find pincode [{pincode}].')
                 else:
                     pincode_info = pin_code_dic[pincode]
                     response = f"Pincode found for area: {pincode_info['Taluk']}, {pincode_info['divisionname']}, {pincode_info['circlename']}."
@@ -79,6 +94,7 @@ def text_commands(update, context):
                     user_request['request'] = list(user_request_set)
                     save_request(user_request_path, user_request)
 
+                    log(user_id, INFO, f'Request registered.')
                     response = f'Your request has been registered. ' \
                                f'You will be notified when vaccine is available in area with ' \
                                f'pincode {pincode} for {age} year olds.'
@@ -93,6 +109,7 @@ def text_commands(update, context):
 
                     # Updating notification state for this user so that, notifier module doesn't send
                     # notifications to this user immediately
+                    log(user_id, DEBUG, f'Updating notification state, type [{response_type}]')
                     notification_state = load_notification_state(user_id)
                     notification_state_key = f'{pincode}_{age}'
                     notification_state[notification_state_key] = {
@@ -122,14 +139,14 @@ def text_commands(update, context):
         response = 'Invalid command. Use /start to see valid commands.'
 
     if type(response) == str and len(response) > 0:
+        log(user_id, INFO, f'Final response sent.')
+        log(user_id, DATA, response)
         context.bot.send_message(chat_id=user_id, text=response)
 
 
 if __name__ == '__main__':
     updater = Updater(token=token, use_context=True)
     dispatcher = updater.dispatcher
-
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
