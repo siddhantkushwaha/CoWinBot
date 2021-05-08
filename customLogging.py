@@ -23,7 +23,7 @@ def get_logger(log_name, path='.', log_level=0):
 
 
 def build_logger(log_name, path, log_level):
-    log_format = '%(lineno)10d %(asctime)s %(module)20s %(funcName)20s %(levelname)8s | %(message)s'
+    log_format = '%(lineno)10d %(asctime)s %(module)20s %(funcName)30s %(levelname)8s | %(message)s'
     log_date_format = '%Y/%m/%d %H:%M:%S'
 
     logging.basicConfig(
