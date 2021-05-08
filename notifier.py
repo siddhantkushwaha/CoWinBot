@@ -48,13 +48,13 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                     notify = True
                 elif last_notification_type == 'negative' and notification_type == 'negative':
                     # send negative notifications repeatedly not closer than 24 hours
-                    if time_diff.seconds > min_time_diff_btw_neg:
+                    if time_diff.total_seconds() > min_time_diff_btw_neg:
                         notify = True
                 elif last_notification_type == 'positive' and notification_type == 'negative':
                     notify = True
                 elif last_notification_type == 'positive' and notification_type == 'positive':
                     # send positive notifications repeatedly not closer than 6 hours
-                    if time_diff.seconds > min_time_diff_btw_pos:
+                    if time_diff.total_seconds() > min_time_diff_btw_pos:
                         notify = True
                 else:
                     notify = True

@@ -183,8 +183,8 @@ def fetch(all_req, min_time_diff_seconds):
         last_timestamp = datetime.fromtimestamp(last_timestamp)
 
         time_diff = curr_timestamp - last_timestamp
-        if time_diff.seconds < min_time_diff_seconds:
-            print(f'Skipping pincode, min time diff condition not met: {time_diff.seconds}.')
+        if time_diff.total_seconds() < min_time_diff_seconds:
+            print(f'Skipping pincode, min time diff condition not met: {time_diff.total_seconds()}.')
             continue
 
         url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
