@@ -11,8 +11,18 @@ INFO = logging.INFO
 WARNING = logging.WARNING
 ERROR = logging.ERROR
 
+pre_existing_loggers = {}
 
-def get_logger(log_name=None, path='.', log_level=0):
+
+def get_logger(log_name, path='.', log_level=0):
+    logger = pre_existing_loggers.get(log_name, None)
+    if logger is None:
+        logger = build_logger(log_name, path, log_level)
+        pre_existing_loggers[log_name] = logger
+    return logger
+
+
+def build_logger(log_name, path, log_level):
     log_format = '%(lineno)10d %(asctime)s %(module)20s %(funcName)20s %(levelname)8s | %(message)s'
     log_date_format = '%Y/%m/%d %H:%M:%S'
 
@@ -22,7 +32,7 @@ def get_logger(log_name=None, path='.', log_level=0):
         level=log_level
     )
 
-    logger = logging.getLogger()
+    logger = logging.getLogger(name=log_name)
 
     if log_name is not None:
         log_path = os.path.join(path, 'logs')
