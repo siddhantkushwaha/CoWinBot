@@ -6,13 +6,13 @@ from customLogging import get_logger, INFO, DEBUG, DATA
 from fetcher import check_slots_available
 from util import load_pincode_set, load_notification_state, save_notification_state
 
-notifier_logger = get_logger('notifier', log_level=5)
+logger = get_logger('main', log_level=5)
 
 valid_pincode_set = load_pincode_set()
 
 
 def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
-    notifier_logger.log(INFO, '-------------- Initiating sending notifications --------------')
+    logger.log(INFO, '-------------- Initiating sending notifications --------------')
 
     curr_time = datetime.now()
 
@@ -28,14 +28,14 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
 
             timestamp, response = check_slots_available(pincode, age)
             if response is not None and len(response) > 0:
-                notifier_logger.log(DEBUG, f'Slots found for user [{user_id}], pincode [{pincode}], age [{age}].')
-                notifier_logger.log(DATA, response)
+                logger.log(DEBUG, f'Slots found for user [{user_id}], pincode [{pincode}], age [{age}].')
+                logger.log(DATA, response)
 
                 notification_type = 'positive'
                 message = f"You have slots available in pincode area {pincode}, for {age} year olds, use command 'request {pincode} {age} to check centers.'"
 
             elif response is not None:
-                notifier_logger.log(DEBUG, f'Slots NOT found for user [{user_id}], pincode [{pincode}], age [{age}].')
+                logger.log(DEBUG, f'Slots NOT found for user [{user_id}], pincode [{pincode}], age [{age}].')
 
                 notification_type = 'negative'
                 message = f"No slots available in pincode area {pincode}, for {age} year olds."
@@ -50,7 +50,7 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                 last_notification_type = notification_state[notification_state_key]['type']
                 time_diff_seconds = (curr_time - last_time_sent).total_seconds()
 
-                notifier_logger.log(DEBUG, f'Found notification state for user [{user_id}], '
+                logger.log(DEBUG, f'Found notification state for user [{user_id}], '
                                   f'last time sent [{last_time_sent}], '
                                   f'last notification type [{last_notification_type}], '
                                   f'current notification type [{notification_type}], time difference in seconds [{time_diff_seconds}].')
@@ -73,7 +73,7 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                 notify = True
 
             if notify:
-                notifier_logger.log(INFO, f'Notifying user [{user_id}], message [{message}].')
+                logger.log(INFO, f'Notifying user [{user_id}], message [{message}].')
 
                 telebot.send_message(user_id, message)
                 notification_state[notification_state_key] = {
@@ -84,4 +84,4 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
 
                 time.sleep(5)
             else:
-                notifier_logger.log(INFO, f'Not notifying user [{user_id}].')
+                logger.log(INFO, f'Not notifying user [{user_id}].')
