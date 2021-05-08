@@ -27,11 +27,16 @@ def fetch_latest_timestamp_pincode(pincode):
 
 def check_slots_available(pincode, age):
     latest_timestamp = fetch_latest_timestamp_pincode(pincode)
+
+    curr_time = datetime.now()
+    time_diff = curr_time - datetime.fromtimestamp(latest_timestamp)
+
     data_by_pincode_path = os.path.join(get_path_for_pincode(pincode), f'{latest_timestamp}.json')
 
     slots_data = {}
 
-    if os.path.exists(data_by_pincode_path):
+    # if date available for this pincode is too old, disregard it
+    if os.path.exists(data_by_pincode_path) and time_diff.total_seconds() < 24 * 3600:
         with open(data_by_pincode_path, 'r') as fp:
             data_by_pincode = json.load(fp)
             for center in data_by_pincode['centers']:
