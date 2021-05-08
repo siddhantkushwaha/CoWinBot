@@ -49,5 +49,5 @@ def get_logger(log_name=None, path='.', log_level=0):
 
 
 if __name__ == '__main__':
-    logger = get_logger('test')
-    logger.log(DEBUG, 'Checking.')
+    test_logger = get_logger('test')
+    test_logger.log(DEBUG, 'Checking.')

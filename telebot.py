@@ -11,7 +11,7 @@ from params import requests_dir, token
 from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
     load_notification_state, save_notification_state
 
-logger = get_logger('telegram', log_level=5)
+telegram_logger = get_logger('telegram', log_level=5)
 
 bot_name = 'vaccinecowinbot'
 
@@ -20,7 +20,7 @@ pin_code_dic = load_pincode_dic()
 
 
 def log(user_id, level, message):
-    logger.log(level, f'{user_id} | {message}')
+    telegram_logger.log(level, f'{user_id} | {message}')
 
 
 def send_message(user_id, message):

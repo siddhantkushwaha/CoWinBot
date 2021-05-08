@@ -4,13 +4,13 @@ from customLogging import get_logger, INFO
 from fetcher import parse_pincode_age_requests, fetch
 from notifier import send_notifications
 
-logger = get_logger('main', log_level=5)
+notifier_logger = get_logger('main', log_level=5)
 
 if __name__ == '__main__':
-    logger.log(INFO, '------------ Main program is now running ------------')
+    notifier_logger.log(INFO, '------------ Main program is now running ------------')
 
     while True:
-        logger.log(INFO, '---------------- New iteration ----------------')
+        notifier_logger.log(INFO, '---------------- New iteration ----------------')
 
         all_user_req = parse_pincode_age_requests()
 

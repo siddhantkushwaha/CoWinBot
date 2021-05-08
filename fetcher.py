@@ -9,7 +9,7 @@ from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
 from params import data_dir, requests_dir
 from util import load_request, delete_request, load_pincode_set
 
-logger = get_logger('fetcher', log_level=5)
+fetcher_logger = get_logger('fetcher', log_level=5)
 
 
 def get_path_for_pincode(pincode):
@@ -17,12 +17,12 @@ def get_path_for_pincode(pincode):
 
 
 def fetch_latest_timestamp_pincode(pincode):
-    logger.log(INFO, f'Getting latest timestamp for pincode [{pincode}].')
+    fetcher_logger.log(INFO, f'Getting latest timestamp for pincode [{pincode}].')
 
     timestamp = 0
     pincode_dir = get_path_for_pincode(pincode)
     if not os.path.exists(pincode_dir):
-        logger.log(WARNING, f'Not data found for pincode [{pincode}].')
+        fetcher_logger.log(WARNING, f'Not data found for pincode [{pincode}].')
     else:
 
         li = os.listdir(pincode_dir)
@@ -31,12 +31,12 @@ def fetch_latest_timestamp_pincode(pincode):
 
         timestamp = max(li, default=0)
 
-    logger.log(INFO, f'Latest timestamp for [{pincode}] is [{timestamp}].')
+    fetcher_logger.log(INFO, f'Latest timestamp for [{pincode}] is [{timestamp}].')
     return timestamp
 
 
 def check_slots_available(pincode, age):
-    logger.log(INFO, f'Check slots for pincode [{pincode}].')
+    fetcher_logger.log(INFO, f'Check slots for pincode [{pincode}].')
 
     latest_timestamp = fetch_latest_timestamp_pincode(pincode)
 
@@ -50,7 +50,7 @@ def check_slots_available(pincode, age):
     is_data_file_exists = os.path.exists(data_by_pincode_path)
     is_data_within_one_day = time_diff.total_seconds() < 24 * 3600
 
-    logger.log(DEBUG, f'For pincode [{pincode}], data file exists: '
+    fetcher_logger.log(DEBUG, f'For pincode [{pincode}], data file exists: '
                       f'[{is_data_file_exists}], is data recent: [{is_data_within_one_day}].')
 
     # if date available for this pincode is too old, disregard it
@@ -104,16 +104,16 @@ def check_slots_available(pincode, age):
 
                     slots_data[name]['sessions'] = sessions
 
-        logger.log(INFO, f'For pincode [{pincode}], age [{age}], slots found at [{latest_timestamp}].')
-        logger.log(DATA, slots_data)
+        fetcher_logger.log(INFO, f'For pincode [{pincode}], age [{age}], slots found at [{latest_timestamp}].')
+        fetcher_logger.log(DATA, slots_data)
         return latest_timestamp, slots_data
     else:
-        logger.log(INFO, f'No slots found for pincode [{pincode}], age [{age}].')
+        fetcher_logger.log(INFO, f'No slots found for pincode [{pincode}], age [{age}].')
         return latest_timestamp, None
 
 
 def check_slot_get_response(pincode, age):
-    logger.log(INFO, f'Build response after checking slots for pincode [{pincode}].')
+    fetcher_logger.log(INFO, f'Build response after checking slots for pincode [{pincode}].')
 
     response = ['']
 
@@ -161,14 +161,14 @@ def check_slot_get_response(pincode, age):
             center_string = center_string.strip()
             response.append(center_string)
 
-    logger.log(INFO, f'Response type [{response_type}] for pincode [{pincode}], age [{age}].')
-    logger.log(DATA, response)
+    fetcher_logger.log(INFO, f'Response type [{response_type}] for pincode [{pincode}], age [{age}].')
+    fetcher_logger.log(DATA, response)
 
     return response_type, response
 
 
 def parse_pincode_age_requests():
-    logger.log(INFO, f'Parsing all requests collected by bot(s).')
+    fetcher_logger.log(INFO, f'Parsing all requests collected by bot(s).')
 
     all_req = {}
 
@@ -191,14 +191,14 @@ def parse_pincode_age_requests():
         else:
             delete_request(req_file_path)
 
-    logger.log(INFO, f'All requests parsed.')
-    logger.log(DATA, all_req)
+    fetcher_logger.log(INFO, f'All requests parsed.')
+    fetcher_logger.log(DATA, all_req)
 
     return all_req
 
 
 def get_all_pincodes(all_req):
-    logger.log(INFO, 'Fetching pincodes from existing user requests.')
+    fetcher_logger.log(INFO, 'Fetching pincodes from existing user requests.')
 
     valid_pincode_set = load_pincode_set()
 
@@ -213,9 +213,9 @@ def get_all_pincodes(all_req):
             else:
                 invalid_pincodes.add(pincode)
 
-    logger.log(DATA, f'Valid pincodes => {pincodes}')
+    fetcher_logger.log(DATA, f'Valid pincodes => {pincodes}')
     if len(invalid_pincodes) > 0:
-        logger.log(WARNING, f'Invalid pincodes found => {invalid_pincodes}')
+        fetcher_logger.log(WARNING, f'Invalid pincodes found => {invalid_pincodes}')
 
     return pincodes
 
@@ -223,7 +223,7 @@ def get_all_pincodes(all_req):
 def fetch(all_req, min_time_diff_seconds):
     pincodes = get_all_pincodes(all_req)
     for pincode in pincodes:
-        logger.log(INFO, f'Fetching for pincode [{pincode}].')
+        fetcher_logger.log(INFO, f'Fetching for pincode [{pincode}].')
 
         curr_timestamp = datetime.now()
         date_today = curr_timestamp.strftime('%d-%m-%Y')
@@ -233,14 +233,14 @@ def fetch(all_req, min_time_diff_seconds):
 
         time_diff_seconds = (curr_timestamp - last_timestamp).total_seconds()
         if time_diff_seconds < min_time_diff_seconds:
-            logger.log(INFO, f'Skipping pincode [{pincode}] because it was '
+            fetcher_logger.log(INFO, f'Skipping pincode [{pincode}] because it was '
                              f'already fetched within last [{time_diff_seconds}] seconds.')
             continue
 
         url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
               f'public/calendarByPin?pincode={pincode}&date={date_today}'
 
-        logger.log(DEBUG, f'API url for pincode [{pincode}] is [{url}].')
+        fetcher_logger.log(DEBUG, f'API url for pincode [{pincode}] is [{url}].')
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 '
@@ -251,7 +251,7 @@ def fetch(all_req, min_time_diff_seconds):
         if response.status_code != 200:
             exception = Exception(f'Failed to fetch data for pincode [{pincode}], '
                                   f'response code [{response.status_code}].')
-            logger.exception(exception)
+            fetcher_logger.exception(exception)
             raise exception
 
         data = json.loads(response.content)
@@ -263,7 +263,7 @@ def fetch(all_req, min_time_diff_seconds):
         with open(data_path, 'w') as fp:
             json.dump(data, fp)
 
-        logger.log(INFO, f'Date fetch success for [{pincode}] at location [{data_path}].')
+        fetcher_logger.log(INFO, f'Date fetch success for [{pincode}] at location [{data_path}].')
 
         # Go easy on the api
         time.sleep(10)
