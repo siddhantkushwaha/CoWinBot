@@ -97,7 +97,7 @@ def check_slot_get_response(pincode, age):
 
     if slots is None:
         response_type = 'none'
-        response[0] = f'Information for this pincode not available as of {timestamp_str}. ' \
+        response[0] = f'Information for this pincode not available. ' \
                       f'Your request has been registered, please wait for some time while we fetch ' \
                       f'information requested by you.'
     elif len(slots) == 0:

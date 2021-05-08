@@ -28,11 +28,14 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                 notification_type = 'positive'
                 message = f"You have slots available in pincode area {pincode}, for {age} year olds, use command 'request {pincode} {age} to check centers.'"
 
-            else:
+            elif response is not None:
                 print(f'For {user_id}, {pincode}, {age}, slots NOT found: {response}')
 
                 notification_type = 'negative'
                 message = f"No slots available in pincode area {pincode}, for {age} year olds."
+
+            else:
+                continue
 
             notify = False
             notification_state_key = f'{pincode}_{age}'
