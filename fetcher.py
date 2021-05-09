@@ -78,7 +78,7 @@ def check_slots_available(pincode, age):
                 vaccine = session['vaccine']
                 slots = session['slots']
 
-                if min_age <= age:
+                if min_age <= age and capacity > 0:
                     center_data = slots_data.get(name, {})
                     slots_data[name] = {
                         'name': name,
@@ -142,11 +142,8 @@ def check_slot_get_response(pincode, age):
                             f"\nTime: {values['from_time']} to {values['to_time']}" \
                             f"\nFee: {values['fee_type']}"
 
-            sessions_with_availability = 0
             for session in values['sessions']:
                 if session['capacity'] > 0:
-                    sessions_with_availability += 1
-
                     session_string = f"\n\nDate: {session['date']}" \
                                      f"\nVaccine name: {session['vaccine']}" \
                                      f"\nMinimum age: {session['min_age']}" \
@@ -154,9 +151,6 @@ def check_slot_get_response(pincode, age):
                                      f"\nSlots: {', '.join(session['slots'])}"
 
                     center_string += session_string
-
-            if sessions_with_availability == 0:
-                center_string = "All appointments are booked for this center." + center_string
 
             center_string = center_string.strip()
             response.append(center_string)
@@ -265,7 +259,7 @@ def fetch(all_req, min_time_diff_seconds):
         with open(data_path, 'w') as fp:
             json.dump(data, fp)
 
-        logger.log(INFO, f'Date fetch success for [{pincode}] at location [{data_path}].')
+        logger.log(INFO, f'Data fetch success for [{pincode}] at location [{data_path}].')
 
         # Go easy on the api
         time.sleep(10)
