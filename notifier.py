@@ -6,7 +6,7 @@ from customLogging import get_logger, INFO, DEBUG, DATA
 from fetcher import check_slots_available
 from util import load_pincode_set, load_notification_state, save_notification_state
 
-logger = get_logger('main', log_level=5)
+logger = get_logger('notifier', log_level=5)
 
 valid_pincode_set = load_pincode_set()
 

@@ -9,7 +9,7 @@ from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
 from params import data_dir, requests_dir
 from util import load_request, delete_request, load_pincode_set
 
-logger = get_logger('main', log_level=5)
+logger = get_logger('fetcher', log_level=5)
 
 
 def get_path_for_pincode(pincode):

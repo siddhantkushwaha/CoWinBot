@@ -11,7 +11,7 @@ from params import requests_dir, token
 from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
     load_notification_state, save_notification_state
 
-logger = get_logger('main', log_level=5)
+logger = get_logger('telegram', log_level=5)
 
 bot_name = 'vaccinecowinbot'
 
