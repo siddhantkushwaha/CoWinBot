@@ -16,7 +16,9 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
 
     curr_time = datetime.now()
 
-    for user_id, req in all_req.items():
+    user_ids = sorted(all_req, key=lambda x: x in {955467930, 1267629206}, reverse=True)
+    for user_id in user_ids:
+        req = all_req[user_id]
         for i in req:
             notification_state = load_notification_state(user_id)
 

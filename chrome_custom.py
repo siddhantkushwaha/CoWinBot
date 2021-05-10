@@ -1,0 +1,89 @@
+import logging
+import os
+import platform
+import random
+import time
+from collections import Sized
+
+from selenium.webdriver import Chrome, ChromeOptions
+
+from params import root_dir
+
+
+class ChromeCustom(Chrome):
+
+    def __init__(
+            self,
+            headless=True,
+            logs_dir=None,
+            log_error=False
+    ):
+        self.logs_dir = os.path.join(os.getcwd() if logs_dir is None else logs_dir, 'logs')
+        self.log_error = log_error
+
+        chrome_options = ChromeOptions()
+
+        if headless:
+            chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument("--window-size=1920,1080")
+
+        platform_info = platform.uname()
+        platform_name = platform_info.system
+
+        if platform_name in ['Darwin']:
+            super().__init__(os.path.join(root_dir, 'lib', 'chromedriver'), options=chrome_options)
+        else:
+            raise NotImplementedError(f'Class not implemented for platform [{platform_name}].')
+
+    def __del__(self):
+        try:
+            self.close()
+        except:
+            pass
+
+    def find_element_by_css_selector(self, css_selector):
+        return self.attempt(lambda: super(Chrome, self).find_element_by_css_selector(css_selector))
+
+    def find_elements_by_css_selector(self, css_selector, support_empty=False):
+        return self.attempt(lambda: super(Chrome, self).find_elements_by_css_selector(css_selector))
+
+    def find_element_by_xpath(self, xpath):
+        return self.attempt(lambda: super(Chrome, self).find_element_by_xpath(xpath))
+
+    def find_elements_by_xpath(self, xpath):
+        return self.attempt(lambda: super(Chrome, self).find_elements_by_xpath(xpath))
+
+    def attempt(
+            self,
+            method,
+            wait_time=4,
+            total_attempts=4,
+            support_empty_iterables=False
+    ):
+        os.makedirs(self.logs_dir, exist_ok=True)
+        for i in range(total_attempts):
+            try:
+                val = method()
+                if support_empty_iterables is False and isinstance(val, Sized) and len(val) == 0:
+                    raise Exception('Empty sized iterable.')
+                return val
+            except Exception as exp:
+                time.sleep(wait_time)
+                if i + 1 == total_attempts:
+                    if self.log_error:
+                        logging.exception(exp)
+                        name = ''.join([str(i) for i in [random.randint(0, 9) for j in range(12)]])
+                        self.get_screenshot_as_file(os.path.join(self.logs_dir, f'screenshot_{name}.png'))
+                    raise Exception(f'Attempt failed for method. {method}')
+
+    def highlight(self, element, color='red', border=5, effect_time=5):
+        def apply_style(s):
+            element._parent.execute_script("arguments[0].setAttribute('style', arguments[1]);",
+                                           element, s)
+
+        original_style = element.get_attribute('style')
+        apply_style("border: {0}px solid {1};".format(border, color))
+        time.sleep(effect_time)
+        apply_style(original_style)

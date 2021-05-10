@@ -3,17 +3,30 @@ import time
 from datetime import datetime
 
 import requests
+from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 from customLogging import get_logger, INFO, DEBUG, DATA
+from db import dbUtil
 from fetcher import check_slot_get_response
-from params import requests_dir, token
+from params import requests_dir, tokens, config
 from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
     load_notification_state, save_notification_state
 
-logger = get_logger('telegram', log_level=5)
+# --------------------------- bot config -------------------------------
 
-bot_name = 'vaccinecowinbot'
+use_ultimate = config['use_ultimate']
+
+bot_tokens = [tokens['cowinbot'], tokens['ultimatecowinbot']]
+
+bot_token = bot_tokens[0]
+if use_ultimate:
+    bot_token = bot_tokens[1]
+
+# ----------------------------------------------------------------------
+
+log_name = 'telegram'
+logger = get_logger(log_name, log_level=5)
 
 pin_code_set = load_pincode_set()
 pin_code_dic = load_pincode_dic()
@@ -24,8 +37,52 @@ def log(user_id, level, message):
 
 
 def send_message(user_id, message):
-    send_text = f'https://api.telegram.org/bot{token}/sendMessage?chat_id={user_id}&parse_mode=Markdown&text={message}'
+    send_text = f'https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={user_id}&parse_mode=Markdown&text={message}'
     response = requests.get(send_text)
+    return response.json()
+
+
+def send_photo_url(user_id, text, url):
+    params = {
+        'chat_id': user_id,
+        'photo': url,
+        'caption': text
+    }
+    response = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', params)
+    return response.json()
+
+
+def send_photo_file_pt(user_id, text, file):
+    file = open(file, 'rb')
+
+    params = {
+        'chat_id': user_id,
+        'caption': text
+    }
+
+    files = {
+        'photo': file
+    }
+
+    response = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', params, files=files)
+
+    file.close()
+
+    return response.json()
+
+
+def send_photo_file(user_id, text, file):
+    params = {
+        'chat_id': user_id,
+        'caption': text
+    }
+
+    files = {
+        'photo': file
+    }
+
+    response = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', params, files=files)
+
     return response.json()
 
 
@@ -124,6 +181,7 @@ def text_commands(update, context):
             response = 'You will not receive notifications.'
         else:
             response = 'You were not subscribed to notifications.'
+
     elif command_type == 'list':
         if is_request_exists(user_request_path):
             user_request = load_request(user_request_path)
@@ -135,6 +193,44 @@ def text_commands(update, context):
             response = response.strip()
         else:
             response = 'You have no registered requests'
+
+    elif command_type == 'phone' and use_ultimate:
+
+        response = 'Share phone number with bot, same number will be used to login at CoWin webiste.'
+        markup = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text='Share phone number with bot.', request_contact=True)]],
+            resize_keyboard=True
+        )
+
+        context.bot.send_message(chat_id=user_id, text=response, reply_markup=markup)
+
+        # special case, final response is handled in contact handler
+        return
+
+    elif command_type == 'otp' and use_ultimate:
+        if len(command_args) < 2:
+            response = 'Invalid command. Use /start to see valid commands.'
+        elif len(command_args[1]) != 6 or not command_args[1].isnumeric():
+            response = 'OTP invalid. Try again.'
+        else:
+            otp = int(command_args[1])
+            ret = dbUtil.set_meta(user_id, 'otpMeta', {'otp': otp})
+            if ret == 0:
+                response = 'OTP received. You should receive a message in a while if OTP is consumed.'
+            else:
+                response = 'Failed to save OTP, please try again.'
+
+    elif command_type == 'captcha' and use_ultimate:
+        if len(command_args) < 2:
+            response = 'Invalid command. Use /start to see valid commands.'
+        else:
+            captcha = command_args[1].strip()
+            ret = dbUtil.set_meta(user_id, 'captchaMeta', {'captcha': captcha})
+            if ret == 0:
+                response = 'Captcha received. You should receive a message in a while if captcha is consumed.'
+            else:
+                response = 'Failed to save captcha, please try again.'
+
     else:
         response = 'Invalid command. Use /start to see valid commands.'
 
@@ -144,15 +240,40 @@ def text_commands(update, context):
         context.bot.send_message(chat_id=user_id, text=response)
 
 
+def contact_handler(update, context):
+    user_id = update.effective_chat.id
+
+    shared_contact = update['message']['contact']
+
+    contact_user_id = shared_contact.user_id
+    contact_phone = shared_contact.phone_number[-10:]
+
+    if contact_user_id != user_id:
+        response = 'This contact does not belong to you.'
+    elif contact_phone is None:
+        response = 'Phone number not found.'
+    else:
+        ret = dbUtil.update_user_info_add_phone_number(user_id, contact_phone)
+        if ret == 0:
+            response = f'Phone number {contact_phone} was added successfully.'
+        else:
+            response = 'Failed to add phone number, try again later.'
+
+    context.bot.send_message(chat_id=user_id, text=response)
+
+
 if __name__ == '__main__':
-    updater = Updater(token=token, use_context=True)
+    updater = Updater(token=bot_token, use_context=True)
     dispatcher = updater.dispatcher
 
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
 
-    echo_handler = MessageHandler(Filters.text & (~Filters.command), text_commands)
-    dispatcher.add_handler(echo_handler)
+    text_handler = MessageHandler(Filters.text & (~Filters.command), text_commands)
+    dispatcher.add_handler(text_handler)
+
+    contact_handler = MessageHandler(Filters.contact & (~Filters.command), contact_handler)
+    dispatcher.add_handler(contact_handler)
 
     updater.start_polling()
 

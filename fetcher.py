@@ -72,6 +72,7 @@ def check_slots_available(pincode, age):
             fee_type = center['fee_type']
 
             for session in center['sessions']:
+                session_id = session['session_id']
                 date = session['date']
                 min_age = session['min_age_limit']
                 capacity = session['available_capacity']
@@ -80,6 +81,8 @@ def check_slots_available(pincode, age):
 
                 if min_age <= age and capacity > 0:
                     center_data = slots_data.get(name, {})
+
+                    # center specific details
                     slots_data[name] = {
                         'name': name,
                         'address': address,
@@ -90,11 +93,13 @@ def check_slots_available(pincode, age):
                         'latlng': (lat, long),
                         'from_time': from_time,
                         'to_time': to_time,
-                        'fee_type': fee_type
+                        'fee_type': fee_type,
                     }
 
+                    # session specific details
                     sessions = center_data.get('sessions', [])
                     sessions.append({
+                        'session_id': session_id,
                         'date': date,
                         'min_age': min_age,
                         'capacity': capacity,
@@ -222,7 +227,6 @@ def fetch(all_req, min_time_diff_seconds):
         logger.log(INFO, f'Fetching for pincode [{pincode}].')
 
         curr_timestamp = datetime.now()
-        date_today = curr_timestamp.strftime('%d-%m-%Y')
 
         last_timestamp = fetch_latest_timestamp_pincode(pincode)
         last_timestamp = datetime.fromtimestamp(last_timestamp)
@@ -233,33 +237,40 @@ def fetch(all_req, min_time_diff_seconds):
                              f'already fetched within last [{time_diff_seconds}] seconds.')
             continue
 
-        url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
-              f'public/calendarByPin?pincode={pincode}&date={date_today}'
-
-        logger.log(DEBUG, f'API url for pincode [{pincode}] is [{url}].')
-
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 '
-                          '(KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
-        }
-        response = requests.get(url, headers=headers)
-
-        if response.status_code != 200:
-            exception = Exception(f'Failed to fetch data for pincode [{pincode}], '
-                                  f'response code [{response.status_code}].')
-            logger.exception(exception)
-            raise exception
-
-        data = json.loads(response.content)
-
-        pt = get_path_for_pincode(pincode)
-        os.makedirs(pt, exist_ok=True)
-
-        data_path = os.path.join(pt, f"{curr_timestamp.strftime('%s')}.json")
-        with open(data_path, 'w') as fp:
-            json.dump(data, fp)
-
-        logger.log(INFO, f'Data fetch success for [{pincode}] at location [{data_path}].')
+        fetch_for_pincode(pincode)
 
         # Go easy on the api
         time.sleep(10)
+
+
+def fetch_for_pincode(pincode):
+    curr_timestamp = datetime.now()
+    date_today = curr_timestamp.strftime('%d-%m-%Y')
+
+    url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
+          f'public/calendarByPin?pincode={pincode}&date={date_today}'
+
+    logger.log(DEBUG, f'API url for pincode [{pincode}] is [{url}].')
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 '
+                      '(KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
+    }
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        exception = Exception(f'Failed to fetch data for pincode [{pincode}], '
+                              f'response code [{response.status_code}].')
+        logger.exception(exception)
+        raise exception
+
+    data = json.loads(response.content)
+
+    pt = get_path_for_pincode(pincode)
+    os.makedirs(pt, exist_ok=True)
+
+    data_path = os.path.join(pt, f"{curr_timestamp.strftime('%s')}.json")
+    with open(data_path, 'w') as fp:
+        json.dump(data, fp)
+
+    logger.log(INFO, f'Data fetch success for [{pincode}] at location [{data_path}].')
