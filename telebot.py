@@ -6,14 +6,15 @@ import requests
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 from customLogging import get_logger, INFO, DEBUG, DATA
+from db import dbHelper
 from fetcher import check_slot_get_response
-from params import requests_dir, token
+from params import requests_dir, tokens
 from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
     load_notification_state, save_notification_state
 
 logger = get_logger('telegram', log_level=5)
 
-bot_name = 'vaccinecowinbot'
+token = tokens['cowinbot']
 
 pin_code_set = load_pincode_set()
 pin_code_dic = load_pincode_dic()
@@ -21,6 +22,17 @@ pin_code_dic = load_pincode_dic()
 
 def log(user_id, level, message):
     logger.log(level, f'{user_id} | {message}')
+
+
+def update_user_meta(user_id, update):
+    dbHelper.get_or_create_user_info(user_id)
+
+    meta = {
+        'username': update.message.chat.username,
+        'first_name': update.message.chat.first_name,
+        'last_name': update.message.chat.last_name
+    }
+    dbHelper.update_user_info(user_id, meta)
 
 
 def send_message(user_id, message):
@@ -31,6 +43,7 @@ def send_message(user_id, message):
 
 def start(update, context):
     user_id = update.effective_chat.id
+    update_user_meta(user_id, update)
 
     log(user_id, INFO, 'Start command received.')
 
@@ -44,6 +57,8 @@ def start(update, context):
 
 def text_commands(update, context):
     user_id = update.effective_chat.id
+    update_user_meta(user_id, update)
+
     command_text = update.message.text
 
     log(user_id, INFO, f'Text command [{command_text}] received.')

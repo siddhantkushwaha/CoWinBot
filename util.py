@@ -73,3 +73,15 @@ def save_notification_state(user_id, notification_state):
     pt = os.path.join(notification_state_dir, f"{user_id}.pickle")
     with open(pt, 'wb') as fp:
         pickle.dump(notification_state, fp)
+
+
+def get_key(obj, keys, if_none_val=None):
+    for key in keys:
+        if obj is None:
+            break
+        obj = obj.get(key, None)
+
+    if obj is None and if_none_val is not None:
+        obj = if_none_val
+
+    return obj
