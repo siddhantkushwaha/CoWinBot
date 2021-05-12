@@ -13,8 +13,7 @@ if __name__ == '__main__':
     while True:
         logger.log(INFO, '---------------- New iteration ----------------')
 
-        # all_user_er_req = parse_pincode_age_requests()
-        all_user_info = dbHelper.get_user_info_all()
+        all_user_info = [i for i in dbHelper.get_user_info_all()]
 
         fetch(
             all_user_info,

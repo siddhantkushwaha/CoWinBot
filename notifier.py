@@ -19,7 +19,6 @@ def send_notifications(all_user_info, min_time_diff_btw_pos, min_time_diff_btw_n
     all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
 
     for user_info in all_user_info:
-
         user_id = user_info['userId']
         user_request = dbHelper.get_requests_userinfo(user_info)
 
