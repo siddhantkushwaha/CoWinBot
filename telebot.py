@@ -1,4 +1,3 @@
-import os
 import time
 from datetime import datetime
 
@@ -8,9 +7,8 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from customLogging import get_logger, INFO, DEBUG, DATA
 from db import dbHelper
 from fetcher import check_slot_get_response
-from params import requests_dir, tokens
-from util import load_request, save_request, delete_request, is_request_exists, load_pincode_set, load_pincode_dic, \
-    load_notification_state, save_notification_state
+from params import tokens
+from util import load_pincode_set, load_pincode_dic
 
 logger = get_logger('telegram', log_level=5)
 
@@ -32,7 +30,7 @@ def update_user_meta(user_id, update):
         'first_name': update.message.chat.first_name,
         'last_name': update.message.chat.last_name
     }
-    dbHelper.update_user_info(user_id, meta)
+    dbHelper.update_user_info_set(user_id, meta)
 
 
 def send_message(user_id, message):
@@ -63,14 +61,11 @@ def text_commands(update, context):
 
     log(user_id, INFO, f'Text command [{command_text}] received.')
 
-    user_request_path = os.path.join(requests_dir, f'{user_id}.json')
-
     command_text = command_text.strip().lower()
     command_args = command_text.split(' ')
 
     command_type = command_args[0] if len(command_args) > 0 else 'invalid'
 
-    response = ''
     if command_type == 'request':
         if len(command_args) < 3:
             response = 'Invalid command. Use /start to see valid commands.'
@@ -96,23 +91,21 @@ def text_commands(update, context):
                     response = f"Can't locate pincode, try again."
                     log(user_id, DEBUG, f'Cannot find pincode [{pincode}].')
                 else:
+
                     pincode_info = pin_code_dic[pincode]
                     response = f"Pincode found for area: {pincode_info['Taluk']}, {pincode_info['divisionname']}, {pincode_info['circlename']}."
+
                     # Sending two messages here, this is not good idea to do everywhere
                     context.bot.send_message(chat_id=user_id, text=response)
 
-                    user_request = load_request(user_request_path)
-
-                    user_request_set = set(user_request.get('request', []))
-                    user_request_set.add(f'{pincode}_{age}')
-
-                    user_request['request'] = list(user_request_set)
-                    save_request(user_request_path, user_request)
-
-                    log(user_id, INFO, f'Request registered.')
-                    response = f'Your request has been registered. ' \
-                               f'You will be notified when vaccine is available in area with ' \
-                               f'pincode {pincode} for {age} year olds.'
+                    ret = dbHelper.add_request(user_id, pincode, age)
+                    if ret > 0:
+                        response = 'Failed to register request, please try again.'
+                    else:
+                        log(user_id, INFO, f'Request registered.')
+                        response = f'Your request has been registered. ' \
+                                   f'You will be notified when vaccine is available in area with ' \
+                                   f'pincode {pincode} for {age} year olds.'
 
                     # Sending two messages here, this is not good idea to do everywhere
                     context.bot.send_message(chat_id=user_id, text=response)
@@ -125,31 +118,34 @@ def text_commands(update, context):
                     # Updating notification state for this user so that, notifier module doesn't send
                     # notifications to this user immediately
                     log(user_id, DEBUG, f'Updating notification state, type [{response_type}]')
-                    notification_state = load_notification_state(user_id)
-                    notification_state_key = f'{pincode}_{age}'
-                    notification_state[notification_state_key] = {
-                        "timestamp": datetime.now(),
-                        "type": response_type
-                    }
-                    save_notification_state(user_id, notification_state)
+                    dbHelper.update_user_info_set(user_id, {
+                        f'notificationState.{pincode}_{age}': {
+                            'timestamp': datetime.utcnow(),
+                            'type': response_type
+                        }
+                    })
 
     elif command_type == 'stop':
-        if is_request_exists(user_request_path):
-            delete_request(user_request_path)
-            response = 'You will not receive notifications.'
+        user_requests = dbHelper.get_requests(user_id)
+        if len(user_requests) > 0:
+            ret = dbHelper.remove_all_requests(user_id)
+            if ret > 0:
+                response = 'Operation failed, please try again.'
+            else:
+                response = 'You will not receive notifications.'
         else:
-            response = 'You were not subscribed to notifications.'
+            response = 'You are not subscribed to notifications.'
+
     elif command_type == 'list':
-        if is_request_exists(user_request_path):
-            user_request = load_request(user_request_path)
-            user_request_set = [i.split('_') for i in set(user_request.get('request', []))]
-            user_request_tuple_set = [(i[0], i[1]) for i in user_request_set]
+        user_requests = dbHelper.get_requests(user_id)
+        if len(user_requests) > 0:
             response = ''
-            for i, val in enumerate(user_request_tuple_set, 1):
+            for i, val in enumerate(user_requests, 1):
                 response += f"\n\n{i}. Pincode: {val[0]}, Age: {val[1]}"
             response = response.strip()
         else:
             response = 'You have no registered requests'
+
     else:
         response = 'Invalid command. Use /start to see valid commands.'
 

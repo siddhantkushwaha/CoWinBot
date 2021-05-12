@@ -1,64 +1,36 @@
 import json
-import os
 import time
 from datetime import datetime
 
 import requests
 
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
-from params import data_dir, requests_dir
-from util import load_request, delete_request, load_pincode_set
+from db import dbHelper
+
+from util import load_pincode_set, get_key
 
 logger = get_logger('fetcher', log_level=5)
 
 
-def get_path_for_pincode(pincode):
-    return os.path.join(data_dir, str(pincode))
-
-
-def fetch_latest_timestamp_pincode(pincode):
-    logger.log(INFO, f'Getting latest timestamp for pincode [{pincode}].')
-
-    timestamp = 0
-    pincode_dir = get_path_for_pincode(pincode)
-    if not os.path.exists(pincode_dir):
-        logger.log(WARNING, f'Not data found for pincode [{pincode}].')
-    else:
-
-        li = os.listdir(pincode_dir)
-        li = filter(lambda p: p.endswith('.json'), li)
-        li = map(lambda p: int(p.replace('.json', '').strip()), li)
-
-        timestamp = max(li, default=0)
-
-    logger.log(INFO, f'Latest timestamp for [{pincode}] is [{timestamp}].')
-    return timestamp
-
-
-def check_slots_available(pincode, age):
+def check_slots_available(pincode_info, pincode, age):
     logger.log(INFO, f'Check slots for pincode [{pincode}].')
 
-    latest_timestamp = fetch_latest_timestamp_pincode(pincode)
+    pincode_data = get_key(pincode_info, ['meta'])
+    latest_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
 
-    curr_time = datetime.now()
-    time_diff = curr_time - datetime.fromtimestamp(latest_timestamp)
+    curr_time = datetime.utcnow()
+    time_diff = curr_time - latest_timestamp
+    is_data_within_one_day = time_diff.total_seconds() < 24 * 3600
 
-    data_by_pincode_path = os.path.join(get_path_for_pincode(pincode), f'{latest_timestamp}.json')
+    logger.log(DEBUG, f'For pincode [{pincode}], data exists: '
+                      f'[{pincode_data is not None}], is data recent: [{is_data_within_one_day}].')
 
     slots_data = {}
 
-    is_data_file_exists = os.path.exists(data_by_pincode_path)
-    is_data_within_one_day = time_diff.total_seconds() < 24 * 3600
-
-    logger.log(DEBUG, f'For pincode [{pincode}], data file exists: '
-                      f'[{is_data_file_exists}], is data recent: [{is_data_within_one_day}].')
-
     # if date available for this pincode is too old, disregard it
-    if is_data_file_exists and is_data_within_one_day:
-        with open(data_by_pincode_path, 'r') as fp:
-            data_by_pincode = json.load(fp)
-
-        for center in data_by_pincode['centers']:
+    if pincode_data is not None and is_data_within_one_day:
+        pincode_data = json.loads(pincode_data)
+        for center in pincode_data['centers']:
             name = center['name']
             address = center['address']
             state = center['state_name']
@@ -112,7 +84,7 @@ def check_slots_available(pincode, age):
         return latest_timestamp, None
 
 
-def check_slot_get_response(pincode, age):
+def check_slot_get_response(pincode_info, pincode, age):
     logger.log(INFO, f'Build response after checking slots for pincode [{pincode}].')
 
     response = ['']
@@ -120,8 +92,7 @@ def check_slot_get_response(pincode, age):
     pincode = int(pincode)
     age = int(age)
 
-    timestamp, slots = check_slots_available(pincode, age)
-    timestamp = datetime.fromtimestamp(timestamp)
+    timestamp, slots = check_slots_available(pincode_info, pincode, age)
     timestamp_str = timestamp.strftime('%d-%m-%Y %I:%M %p')
 
     if slots is None:
@@ -161,37 +132,7 @@ def check_slot_get_response(pincode, age):
     return response_type, response
 
 
-def parse_pincode_age_requests():
-    logger.log(INFO, f'Parsing all requests collected by bot(s).')
-
-    all_req = {}
-
-    for req_file in os.listdir(requests_dir):
-        if not req_file.endswith('.json'):
-            continue
-
-        req_file_path = os.path.join(requests_dir, req_file)
-
-        user_request = load_request(req_file_path)
-
-        user_id = int(req_file.replace('.json', ''))
-        user_requests = []
-        for item in user_request['request']:
-            item_split = item.split('_')
-            user_requests.append((int(item_split[0]), int(item_split[1])))
-
-        if len(user_requests) > 0:
-            all_req[user_id] = user_requests
-        else:
-            delete_request(req_file_path)
-
-    logger.log(INFO, f'All requests parsed.')
-    logger.log(DATA, all_req)
-
-    return all_req
-
-
-def get_all_pincodes(all_req):
+def get_all_pincodes(all_user_info):
     logger.log(INFO, 'Fetching pincodes from existing user requests.')
 
     valid_pincode_set = load_pincode_set()
@@ -199,9 +140,9 @@ def get_all_pincodes(all_req):
     pincodes = set()
     invalid_pincodes = set()
 
-    for user_id, req in all_req.items():
-        for i in req:
-            pincode = int(i[0])
+    for user_info in all_user_info:
+        user_request = dbHelper.get_requests_userinfo(user_info)
+        for pincode, age in user_request:
             if pincode in valid_pincode_set:
                 pincodes.add(pincode)
             else:
@@ -214,18 +155,20 @@ def get_all_pincodes(all_req):
     return pincodes
 
 
-def fetch(all_req, min_time_diff_seconds):
+def fetch(all_user_info, min_time_diff_seconds):
     priority_pincodes = {263139}
 
-    pincodes = get_all_pincodes(all_req)
+    pincodes = get_all_pincodes(all_user_info)
+    all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
+
     for pincode in pincodes:
         logger.log(INFO, f'Fetching for pincode [{pincode}].')
 
-        curr_timestamp = datetime.now()
+        curr_timestamp = datetime.utcnow()
         date_today = curr_timestamp.strftime('%d-%m-%Y')
 
-        last_timestamp = fetch_latest_timestamp_pincode(pincode)
-        last_timestamp = datetime.fromtimestamp(last_timestamp)
+        pincode_info = all_pincode_info_dic.get(pincode, {})
+        last_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
 
         time_diff_seconds = (curr_timestamp - last_timestamp).total_seconds()
         if pincode not in priority_pincodes and time_diff_seconds < min_time_diff_seconds:
@@ -250,16 +193,21 @@ def fetch(all_req, min_time_diff_seconds):
             logger.exception(exception)
             raise exception
 
-        data = json.loads(response.content)
+        meta = response.content.decode()
 
-        pt = get_path_for_pincode(pincode)
-        os.makedirs(pt, exist_ok=True)
+        if len(pincode_info) == 0:
+            pincode_info = dbHelper.create_pincode_info(pincode)
+            if pincode_info is None:
+                logger.log(INFO, f'Failed to create object for pincode [{pincode}].')
+                continue
+            else:
+                logger.log(INFO, f'Object created for pincode [{pincode}].')
 
-        data_path = os.path.join(pt, f"{curr_timestamp.strftime('%s')}.json")
-        with open(data_path, 'w') as fp:
-            json.dump(data, fp)
-
-        logger.log(INFO, f'Data fetch success for [{pincode}] at location [{data_path}].')
+        ret = dbHelper.update_pincode_info_set(pincode, {'meta': meta})
+        if ret == 0:
+            logger.log(INFO, f'Data update success for [{pincode}].')
+        else:
+            logger.log(INFO, f'Failed to save to db.')
 
         # Go easy on the api
         time.sleep(10)

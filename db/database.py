@@ -12,3 +12,7 @@ class Database:
     @property
     def userInfo(self):
         return self.db['userInfo']
+
+    @property
+    def pinCodeInfo(self):
+        return self.db['pincodeInfo']

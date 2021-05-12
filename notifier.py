@@ -3,30 +3,34 @@ from datetime import datetime
 
 import telebot
 from customLogging import get_logger, INFO, DEBUG, DATA
+from db import dbHelper
 from fetcher import check_slots_available
-from util import load_pincode_set, load_notification_state, save_notification_state
+from util import load_pincode_set, get_key
 
 logger = get_logger('notifier', log_level=5)
 
 valid_pincode_set = load_pincode_set()
 
 
-def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
+def send_notifications(all_user_info, min_time_diff_btw_pos, min_time_diff_btw_neg):
     logger.log(INFO, '-------------- Initiating sending notifications --------------')
 
-    curr_time = datetime.now()
+    curr_time = datetime.utcnow()
+    all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
 
-    for user_id, req in all_req.items():
-        for i in req:
-            notification_state = load_notification_state(user_id)
+    for user_info in all_user_info:
 
-            pincode = int(i[0])
-            age = int(i[1])
+        user_id = user_info['userId']
+        user_request = dbHelper.get_requests_userinfo(user_info)
+
+        for pincode, age in user_request:
+            pincode_info = all_pincode_info_dic.get(pincode, None)
+            notification_state = get_key(user_info, ['notificationState', f'{pincode}_{age}'], {})
 
             if pincode not in valid_pincode_set:
                 continue
 
-            timestamp, response = check_slots_available(pincode, age)
+            timestamp, response = check_slots_available(pincode_info, pincode, age)
             if response is not None and len(response) > 0:
                 logger.log(DEBUG, f'Slots found for user [{user_id}], pincode [{pincode}], age [{age}].')
                 logger.log(DATA, response)
@@ -44,10 +48,10 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                 continue
 
             notify = False
-            notification_state_key = f'{pincode}_{age}'
-            if len(notification_state.get(notification_state_key, {})) > 0:
-                last_time_sent = notification_state[notification_state_key]['timestamp']
-                last_notification_type = notification_state[notification_state_key]['type']
+
+            if len(notification_state) > 0:
+                last_time_sent = notification_state['timestamp']
+                last_notification_type = notification_state['type']
                 time_diff_seconds = (curr_time - last_time_sent).total_seconds()
 
                 logger.log(DEBUG, f'Found notification state for user [{user_id}], '
@@ -76,11 +80,13 @@ def send_notifications(all_req, min_time_diff_btw_pos, min_time_diff_btw_neg):
                 logger.log(INFO, f'Notifying user [{user_id}], message [{message}].')
 
                 telebot.send_message(user_id, message)
-                notification_state[notification_state_key] = {
-                    "timestamp": curr_time,
-                    "type": notification_type
-                }
-                save_notification_state(user_id, notification_state)
+
+                dbHelper.update_user_info_set(user_id, {
+                    f'notificationState.{pincode}_{age}': {
+                        'timestamp': datetime.utcnow(),
+                        'type': notification_type
+                    }
+                })
 
                 time.sleep(5)
             else:

@@ -1,7 +1,8 @@
 import time
 
 from customLogging import get_logger, INFO
-from fetcher import parse_pincode_age_requests, fetch
+from db import dbHelper
+from fetcher import fetch
 from notifier import send_notifications
 
 logger = get_logger('main', log_level=5)
@@ -12,15 +13,16 @@ if __name__ == '__main__':
     while True:
         logger.log(INFO, '---------------- New iteration ----------------')
 
-        all_user_req = parse_pincode_age_requests()
+        # all_user_er_req = parse_pincode_age_requests()
+        all_user_info = dbHelper.get_user_info_all()
 
         fetch(
-            all_user_req,
+            all_user_info,
             min_time_diff_seconds=8 * 3600
         )
 
         send_notifications(
-            all_user_req,
+            all_user_info,
             min_time_diff_btw_pos=12 * 3600,
             min_time_diff_btw_neg=24 * 3600
         )
