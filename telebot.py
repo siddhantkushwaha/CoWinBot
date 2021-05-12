@@ -112,7 +112,8 @@ def text_commands(update, context):
                     # Sending two messages here, this is not good idea to do everywhere
                     context.bot.send_message(chat_id=user_id, text=response)
 
-                    response_type, response = check_slot_get_response(pincode, age)
+                    pincode_info = dbHelper.get_pincode_info(pincode)
+                    response_type, response = check_slot_get_response(pincode_info, pincode, age)
                     for res in response:
                         context.bot.send_message(chat_id=user_id, text=res)
                         time.sleep(2)

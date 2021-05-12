@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
         fetch(
             all_user_info,
-            min_time_diff_seconds=8 * 3600
+            min_time_diff_seconds=1 * 3600
         )
 
         send_notifications(

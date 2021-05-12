@@ -2,6 +2,7 @@ import json
 import time
 from datetime import datetime
 
+import pytz
 import requests
 
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
@@ -93,7 +94,10 @@ def check_slot_get_response(pincode_info, pincode, age):
     age = int(age)
 
     timestamp, slots = check_slots_available(pincode_info, pincode, age)
-    timestamp_str = timestamp.strftime('%d-%m-%Y %I:%M %p')
+    timestamp_str = timestamp \
+        .replace(tzinfo=pytz.utc) \
+        .astimezone(pytz.timezone('Asia/Kolkata')) \
+        .strftime('%d-%m-%Y %I:%M %p')
 
     if slots is None:
         response_type = 'none'
@@ -160,6 +164,8 @@ def fetch(all_user_info, min_time_diff_seconds):
 
     pincodes = get_all_pincodes(all_user_info)
     all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
+
+    logger.log(INFO, f'**** number of pincodes in request database [{len(pincodes)}] *****')
 
     for pincode in pincodes:
         logger.log(INFO, f'Fetching for pincode [{pincode}].')
