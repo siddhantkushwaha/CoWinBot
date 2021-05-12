@@ -99,8 +99,10 @@ def text_commands(update, context):
                     context.bot.send_message(chat_id=user_id, text=response)
 
                     ret = dbHelper.add_request(user_id, pincode, age)
-                    if ret > 0:
+                    if ret > 1:
                         response = 'Failed to register request, please try again.'
+                    elif ret == 1:
+                        response = 'You can only have 4 registered requests at a time.'
                     else:
                         log(user_id, INFO, f'Request registered.')
                         response = f'Your request has been registered. ' \
