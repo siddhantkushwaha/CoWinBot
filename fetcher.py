@@ -159,6 +159,21 @@ def get_all_pincodes(all_user_info):
     return pincodes
 
 
+def build_user_requests_by_pincode(all_user_info):
+    res = {}
+
+    for user_info in all_user_info:
+        user_id = user_info['userId']
+        user_request = dbHelper.get_requests_userinfo(user_info)
+
+        for pincode, age in user_request:
+            by_pincode = res.get(pincode, set())
+            by_pincode.add((user_id, age))
+            res[pincode] = by_pincode
+
+    return res
+
+
 def fetch(all_user_info, min_time_diff_seconds):
     priority_pincodes = {263139}
 
@@ -173,7 +188,8 @@ def fetch(all_user_info, min_time_diff_seconds):
         curr_timestamp = datetime.utcnow()
         date_today = curr_timestamp.strftime('%d-%m-%Y')
 
-        # we can afford to have stale information here since this just to calculate time diff
+        # we can afford to have stale information here since this just to calculate time diff.
+        # Worst case scenario - pincode will be fetched closer than intended time gap
         pincode_info = all_pincode_info_dic.get(pincode, {})
 
         last_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
