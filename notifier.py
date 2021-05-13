@@ -4,7 +4,7 @@ from datetime import datetime
 import telebot
 from customLogging import get_logger, INFO, DEBUG, DATA
 from db import dbHelper
-from fetcher import check_slots_available
+from fetcher import check_slot_get_response
 from params import root_dir
 from util import load_pincode_set, get_key
 
@@ -31,18 +31,24 @@ def send_notifications(all_user_info, min_time_diff_btw_pos, min_time_diff_btw_n
             if pincode not in valid_pincode_set:
                 continue
 
-            timestamp, response = check_slots_available(pincode_info, pincode, age)
-            if response is not None and len(response) > 0:
+            notification_type, response = check_slot_get_response(pincode_info, pincode, age)
+
+            if notification_type == 'positive':
                 logger.log(DEBUG, f'Slots found for user [{user_id}], pincode [{pincode}], age [{age}].')
                 logger.log(DATA, response)
 
-                notification_type = 'positive'
-                message = f"You have slots available in pincode area {pincode}, for {age} year olds, use command 'request {pincode} {age} to check centers.'"
+                if len(response) > 1:
+                    message = f"You have slots available in pincode area {pincode}, for {age} year olds, use command 'request {pincode} {age}' to check centers."
+                elif len(response) > 0:
+                    message = f"You have slots available in pincode area {pincode}, for {age} year olds." \
+                              f"\n\n{response[0]}"
+                else:
+                    logger.exception('*********** Impossible condition, check immediately. ***********')
+                    continue
 
-            elif response is not None:
+            elif notification_type == 'negative':
                 logger.log(DEBUG, f'Slots NOT found for user [{user_id}], pincode [{pincode}], age [{age}].')
 
-                notification_type = 'negative'
                 message = f"No slots available in pincode area {pincode}, for {age} year olds."
 
             else:
