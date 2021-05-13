@@ -1,8 +1,9 @@
-import time
 import queue
+import time
 from threading import Thread
 
 from flask import Flask, request
+
 from customLogging import get_logger, INFO, DEBUG
 from db import dbHelper
 from fetcher import get_all_pincodes
