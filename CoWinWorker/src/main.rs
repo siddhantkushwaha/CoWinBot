@@ -75,7 +75,7 @@ fn main() {
         );
     }
 
-    let server_url = "sid.centralindia.cloudapp.azure.com:5000";
+    let server_url = "http://sid.centralindia.cloudapp.azure.com:5000";
 
     let mut i = 0;
     loop {
