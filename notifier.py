@@ -15,7 +15,6 @@ valid_pincode_set = load_pincode_set()
 def send_notifications(all_user_info, min_time_diff_btw_pos, min_time_diff_btw_neg):
     logger.log(INFO, '-------------- Initiating sending notifications --------------')
 
-    curr_time = datetime.utcnow()
     all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
 
     for user_info in all_user_info:
@@ -23,6 +22,8 @@ def send_notifications(all_user_info, min_time_diff_btw_pos, min_time_diff_btw_n
         user_request = dbHelper.get_requests_userinfo(user_info)
 
         for pincode, age in user_request:
+            curr_time = datetime.utcnow()
+
             pincode_info = all_pincode_info_dic.get(pincode, None)
             notification_state = get_key(user_info, ['notificationState', f'{pincode}_{age}'], {})
 
