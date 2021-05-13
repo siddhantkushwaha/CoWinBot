@@ -49,18 +49,24 @@ fn index_pincode(server_url: &str, pincode: i32, data: String) -> Result<i32, re
 }
 
 fn main() {
-
-    println!("
+    println!(
+        "
     ----------------------------------------------------
         Worker node for CoWinBot. Thanks for helping!
-    ----------------------------------------------------\n\n");
+    ----------------------------------------------------\n\n"
+    );
 
     let args: Vec<String> = env::args().collect();
 
-    let prioritise_pincode = match args[1].parse::<i32>() {
-        Ok(i) => i,
-        Err(_err) => -1,
-    };
+    let prioritise_pincode;
+    if args.len() > 1 {
+        prioritise_pincode = match args[1].parse::<i32>() {
+            Ok(i) => i,
+            Err(_err) => -1,
+        };
+    } else {
+        prioritise_pincode = -1;
+    }
 
     if prioritise_pincode > 0 {
         println!(
@@ -73,7 +79,6 @@ fn main() {
 
     let mut i = 0;
     loop {
-
         println!("\n--------------- new iteration --------------");
 
         let pincode;
