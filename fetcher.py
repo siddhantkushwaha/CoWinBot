@@ -173,7 +173,9 @@ def fetch(all_user_info, min_time_diff_seconds):
         curr_timestamp = datetime.utcnow()
         date_today = curr_timestamp.strftime('%d-%m-%Y')
 
+        # we can afford to have stale information here since this just to calculate time diff
         pincode_info = all_pincode_info_dic.get(pincode, {})
+
         last_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
 
         time_diff_seconds = (curr_timestamp - last_timestamp).total_seconds()
