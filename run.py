@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
         fetch(
             all_user_info,
-            min_time_diff_seconds=1 * 3600
+            min_time_diff_seconds=5 * 3600
         )
 
         send_notifications(
@@ -27,5 +27,5 @@ if __name__ == '__main__':
             min_time_diff_btw_neg=24 * 3600
         )
 
-        # re-run every 5 minutes
-        time.sleep(5 * 60)
+        # re-run every 1 minutes
+        time.sleep(1 * 60)
