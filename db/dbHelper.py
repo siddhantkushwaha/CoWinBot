@@ -141,12 +141,7 @@ def update_pincode_info_set(pincode, pincode_info):
     pincode = int(pincode)
 
     try:
-        curr_time = datetime.utcnow()
-        last_modified_time = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
-
-        pincode_info['modifiedTime'] = curr_time
-        pincode_info['modifyTimeDiffSeconds'] = (curr_time - last_modified_time).total_seconds()
-
+        pincode_info['modifiedTime'] = datetime.utcnow()
         db.pinCodeInfo.update_one({'pincode': pincode}, update={'$set': pincode_info})
         return 0
     except Exception as e:
