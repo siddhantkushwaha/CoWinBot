@@ -4,8 +4,9 @@ from customLogging import get_logger, INFO
 from db import dbHelper
 from fetcher import fetch
 from notifier import send_notifications
+from params import root_dir
 
-logger = get_logger('main', log_level=5)
+logger = get_logger('main', path=root_dir, log_level=5)
 
 if __name__ == '__main__':
     logger.log(INFO, '------------ Main program is now running ------------')

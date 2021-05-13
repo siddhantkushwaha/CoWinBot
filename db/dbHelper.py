@@ -2,12 +2,12 @@ from datetime import datetime
 
 from customLogging import get_logger, INFO
 from db.database import Database
-from params import config
+from params import config, root_dir
 from util import get_key
 
 db = Database()
 
-logger = get_logger(log_name='db', log_level=5)
+logger = get_logger(log_name='db', path=root_dir, log_level=5)
 
 
 def get_user_info(user_id):

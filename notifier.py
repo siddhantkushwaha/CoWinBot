@@ -5,9 +5,10 @@ import telebot
 from customLogging import get_logger, INFO, DEBUG, DATA
 from db import dbHelper
 from fetcher import check_slots_available
+from params import root_dir
 from util import load_pincode_set, get_key
 
-logger = get_logger('notifier', log_level=5)
+logger = get_logger('notifier', path=root_dir, log_level=5)
 
 valid_pincode_set = load_pincode_set()
 

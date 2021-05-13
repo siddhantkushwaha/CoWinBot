@@ -7,9 +7,10 @@ import requests
 
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
 from db import dbHelper
+from params import root_dir
 from util import load_pincode_set, get_key
 
-logger = get_logger('fetcher', log_level=5)
+logger = get_logger('fetcher', path=root_dir, log_level=5)
 
 
 def check_slots_available(pincode_info, pincode, age):

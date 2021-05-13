@@ -7,10 +7,10 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from customLogging import get_logger, INFO, DEBUG, DATA
 from db import dbHelper
 from fetcher import check_slot_get_response
-from params import tokens
+from params import tokens, root_dir
 from util import load_pincode_set, load_pincode_dic
 
-logger = get_logger('telegram', log_level=5)
+logger = get_logger('telegram', path=root_dir, log_level=5)
 
 token = tokens['cowinbot']
 
