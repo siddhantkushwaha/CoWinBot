@@ -37,13 +37,13 @@ def send_notifications(
             # worst case scenario - user could get same notification twice
             user_info = user_info_by_user_id.get(user_id, None)
             if user_info is None:
-                logger.log(WARNING, '******** Impossible even, debug immediately. ********')
+                logger.log(WARNING, '******** Impossible event, debug immediately. ********')
                 continue
 
             ret = send_notification(user_id, pincode, age, pincode_info, user_info, min_time_diff_btw_pos,
                                     min_time_diff_btw_neg)
             if ret == 0:
-                # wait if message as sent, to ease on telegram api
+                # wait if message was sent, to ease on telegram api
                 time.sleep(5)
 
         # ease on db query
@@ -59,8 +59,8 @@ def send_notification(
         pincode_info,
         user_info,
 
-        min_time_diff_btw_pos,
-        min_time_diff_btw_neg
+        min_time_diff_btw_pos=12 * 3600,
+        min_time_diff_btw_neg=24 * 3600
 ) -> int:
     curr_time = datetime.utcnow()
 
@@ -78,7 +78,7 @@ def send_notification(
             message = f"You have slots available in pincode area {pincode}, for {age} year olds." \
                       f"\n\n{response[0]}"
         else:
-            logger.log(WARNING, '******** Impossible even, debug immediately. ********')
+            logger.log(WARNING, '******** Impossible event, debug immediately. ********')
             return 1
 
     elif notification_type == 'negative':

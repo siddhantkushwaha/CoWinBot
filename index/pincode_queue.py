@@ -6,13 +6,16 @@ from flask import Flask, request
 
 from customLogging import get_logger, INFO, DEBUG
 from db import dbHelper
-from fetcher import get_all_pincodes
+from fetcher import get_all_pincodes, build_user_requests_by_pincode
+from notifier import send_notification
 from params import root_dir
 from util import load_pincode_set
 
 app = Flask(__name__)
 
 process_queue = queue.Queue()
+user_requests_by_pincode = dict()
+
 valid_pincodes = load_pincode_set()
 
 logger = get_logger('pincode_queue', path=root_dir, log_level=5)
@@ -50,9 +53,42 @@ def worker_thread_func():
         time.sleep(1 * 60 * 60)
 
 
-def init_worker_thread():
-    th = Thread(name='cowin_pincode_queue_worker', target=worker_thread_func)
+def worker_refresh_user_requests_by_pincode():
+    global user_requests_by_pincode
+
+    while True:
+        all_user_info = dbHelper.get_user_info_all()
+        user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
+
+        # 15 minutes
+        time.sleep(15 * 60)
+
+
+def init_worker_thread(name, target):
+    th = Thread(name=name, target=target)
     th.start()
+
+
+def send_notifications_thread(pincode):
+    by_pincode = user_requests_by_pincode.get(pincode, set())
+    if len(by_pincode) > 0:
+        pincode_info = dbHelper.get_pincode_info(pincode)
+
+        for user_id, age in by_pincode:
+
+            # we want upto date notification state
+            user_info = dbHelper.get_user_info(user_id)
+            if user_info is None:
+                logger.log(DEBUG, '******** Impossible event, debug immediately. ********')
+                continue
+
+            ret = send_notification(user_id, pincode, age, pincode_info, user_info)
+            if ret == 0:
+                # wait if message was sent, to ease on telegram api
+                time.sleep(5)
+
+            # ease on db queries
+            time.sleep(1)
 
 
 @app.route('/get', methods=['GET'])
@@ -87,14 +123,25 @@ def index_pincode():
         else:
             logger.log(INFO, f'Failed to save to db.')
 
-        return {'error': 0, 'message': 'Pincode data capture success.'}
+        notification_th = Thread(target=send_notifications_thread, args=[pincode])
+        notification_th.start()
+
+        return {'error': 0}
     else:
         logger.log(INFO, f'Invalid pincode [{pincode}]. Something wrong with worker code?')
 
-        return {'error': 1, 'message': 'Invalid pincode.'}
+        return {'error': 1}
 
 
 if __name__ == '__main__':
-    init_worker_thread()
+    init_worker_thread(
+        name='cowin_pincode_queue_worker',
+        target=worker_thread_func
+    )
+
+    init_worker_thread(
+        name='cowin_requests_by_pincode_worker',
+        target=worker_refresh_user_requests_by_pincode
+    )
 
     app.run(host='0.0.0.0', port=5000)
