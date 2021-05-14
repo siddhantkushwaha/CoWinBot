@@ -183,7 +183,6 @@ def fetch(all_user_info, min_time_diff_seconds):
         logger.log(INFO, f'Fetching for pincode [{pincode}].')
 
         curr_timestamp = datetime.utcnow()
-        # date_today = curr_timestamp.strftime('%d-%m-%Y')
 
         # we can afford to have stale information here since this just to calculate time diff.
         # Worst case scenario - pincode will be fetched closer than intended time gap
