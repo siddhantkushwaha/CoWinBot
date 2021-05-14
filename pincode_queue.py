@@ -59,7 +59,7 @@ def worker_refresh_user_requests_by_pincode():
     global user_requests_by_pincode, user_info_by_user_id
 
     while True:
-        all_user_info = dbHelper.get_user_info_all()
+        all_user_info = [i for i in dbHelper.get_user_info_all()]
 
         user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
         user_info_by_user_id = {i['userId']: i for i in all_user_info}
