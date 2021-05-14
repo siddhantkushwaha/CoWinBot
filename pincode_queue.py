@@ -1,5 +1,6 @@
 import queue
 import time
+import random
 from datetime import datetime
 from threading import Thread
 
@@ -42,7 +43,10 @@ def populate_process_queue():
 
     # populate again
     all_user_info = dbHelper.get_user_info_all()
-    pincodes = get_all_pincodes(all_user_info)
+
+    pincodes = [i for i in get_all_pincodes(all_user_info)]
+    random.shuffle(pincodes)
+
     for pincode in pincodes:
         process_queue.put(pincode)
 
