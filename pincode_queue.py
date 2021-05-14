@@ -1,5 +1,6 @@
 import queue
 import time
+from datetime import datetime
 from threading import Thread
 
 from flask import Flask, request
@@ -15,6 +16,7 @@ app = Flask(__name__)
 
 process_queue = queue.Queue()
 user_requests_by_pincode = dict()
+user_info_by_user_id = dict()
 
 valid_pincodes = load_pincode_set()
 
@@ -54,14 +56,16 @@ def worker_thread_func():
 
 
 def worker_refresh_user_requests_by_pincode():
-    global user_requests_by_pincode
+    global user_requests_by_pincode, user_info_by_user_id
 
     while True:
         all_user_info = dbHelper.get_user_info_all()
-        user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
 
-        # 15 minutes
-        time.sleep(15 * 60)
+        user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
+        user_info_by_user_id = {i['userId']: i for i in all_user_info}
+
+        # 5 minutes
+        time.sleep(5 * 60)
 
 
 def init_worker_thread(name, target):
@@ -69,15 +73,20 @@ def init_worker_thread(name, target):
     th.start()
 
 
-def send_notifications_thread(pincode):
+def send_notifications_thread(pincode, pincode_meta):
     by_pincode = user_requests_by_pincode.get(pincode, set())
     if len(by_pincode) > 0:
-        pincode_info = dbHelper.get_pincode_info(pincode)
+
+        # create info obj instead of fetching from db
+        pincode_info = {
+            'modifiedTime': datetime.utcnow(),
+            'meta': pincode_meta
+        }
 
         for user_id, age in by_pincode:
 
-            # we want upto date notification state
-            user_info = dbHelper.get_user_info(user_id)
+            # user_info dic is updated every 5 minutes by another thread
+            user_info = user_info_by_user_id.get(user_id, None)
             if user_info is None:
                 logger.log(DEBUG, '******** Impossible event, debug immediately. ********')
                 continue
@@ -86,9 +95,6 @@ def send_notifications_thread(pincode):
             if ret == 0:
                 # wait if message was sent, to ease on telegram api
                 time.sleep(5)
-
-            # ease on db queries
-            time.sleep(1)
 
 
 @app.route('/get', methods=['GET'])
@@ -123,7 +129,7 @@ def index_pincode():
         else:
             logger.log(INFO, f'Failed to save to db.')
 
-        notification_th = Thread(target=send_notifications_thread, args=[pincode])
+        notification_th = Thread(target=send_notifications_thread, args=[pincode, meta])
         notification_th.start()
 
         return {'error': 0}

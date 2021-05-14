@@ -39,6 +39,50 @@ def send_message(user_id, message):
     return response.json()
 
 
+def send_photo_url(user_id, text, url):
+    params = {
+        'chat_id': user_id,
+        'photo': url,
+        'caption': text
+    }
+    response = requests.post(f'https://api.telegram.org/bot{token}/sendPhoto', params)
+    return response.json()
+
+
+def send_photo_file_pt(user_id, text, file):
+    file = open(file, 'rb')
+
+    params = {
+        'chat_id': user_id,
+        'caption': text
+    }
+
+    files = {
+        'photo': file
+    }
+
+    response = requests.post(f'https://api.telegram.org/bot{token}/sendPhoto', params, files=files)
+
+    file.close()
+
+    return response.json()
+
+
+def send_photo_file(user_id, text, file):
+    params = {
+        'chat_id': user_id,
+        'caption': text
+    }
+
+    files = {
+        'photo': file
+    }
+
+    response = requests.post(f'https://api.telegram.org/bot{token}/sendPhoto', params, files=files)
+
+    return response.json()
+
+
 def start(update, context):
     user_id = update.effective_chat.id
     update_user_meta(user_id, update)
@@ -49,7 +93,7 @@ def start(update, context):
                  "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
                  "\n\nTo list all requests registered by you, send command 'list'. " \
                  "\n\nTo stop getting notifications, send command 'stop'." \
-                 "\n\nReport issues at k16.siddhant@gmail.com"
+                 "\n\nReport issues at t.me/siddhantkushwaha"
     context.bot.send_message(chat_id=user_id, text=start_text)
 
 

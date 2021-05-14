@@ -22,11 +22,14 @@ def send_notifications(
 
     user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
     all_pincodes = get_all_pincodes(all_user_info)
+
     user_info_by_user_id = {i['userId']: i for i in all_user_info}
+    all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
 
     for pincode in all_pincodes:
-        # pincode info here should be as latest as possible since this is used to update users
-        pincode_info = dbHelper.get_pincode_info(pincode)
+
+        # using cached pincode info here, can't make too many db calls
+        pincode_info = all_pincode_info_dic.get(pincode, None)
 
         by_pincode = user_requests_by_pincode.get(pincode, set())
 
@@ -45,9 +48,6 @@ def send_notifications(
             if ret == 0:
                 # wait if message was sent, to ease on telegram api
                 time.sleep(5)
-
-        # ease on db query
-        time.sleep(1)
 
 
 def send_notification(

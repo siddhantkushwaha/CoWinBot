@@ -53,6 +53,8 @@ fn main() {
         "
     ----------------------------------------------------
         Worker node for CoWinBot. Thanks for helping!
+
+                   t.me/vaccinecowinbot
     ----------------------------------------------------\n\n"
     );
 
@@ -88,7 +90,8 @@ fn main() {
             pincode = match get_pincode(server_url) {
                 Ok(i) => i,
                 Err(_err) => {
-                    panic!("Failed to fetch pincode from server.")
+                    println!("Failed to fetch pincode from server.");
+                    continue;
                 }
             };
         }
@@ -98,7 +101,8 @@ fn main() {
         let pincode_info = match get_info_for_pincode(pincode) {
             Ok(info) => info,
             Err(_err) => {
-                panic!("Couldn't get info for pincode [{}].", pincode)
+                println!("Couldn't get info for pincode [{}].", pincode);
+                continue;
             }
         };
 
@@ -107,7 +111,8 @@ fn main() {
         let index_error_code = match index_pincode(server_url, pincode, pincode_info) {
             Ok(i) => i,
             Err(_err) => {
-                panic!("Failed to index pincode [{}] to server.", pincode)
+                println!("Failed to index pincode [{}] to server.", pincode);
+                continue;
             }
         };
 
