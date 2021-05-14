@@ -81,6 +81,8 @@ fn main() {
 
     let mut i = 0;
     loop {
+        thread::sleep(Duration::from_secs(10));
+
         println!("\n--------------- new iteration --------------");
 
         let pincode;
@@ -123,7 +125,5 @@ fn main() {
 
         i += 1;
         i %= 5;
-
-        thread::sleep(Duration::from_secs(10))
     }
 }
