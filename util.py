@@ -1,7 +1,13 @@
 import os
 import pickle
 
+import pytz
+
 from params import raw_data_dir
+
+
+def ist_time(dt):
+    return dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Kolkata'))
 
 
 def save_pincode_set(pincode_set):

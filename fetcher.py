@@ -8,7 +8,7 @@ import requests
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
 from db import dbHelper
 from params import root_dir
-from util import load_pincode_set, get_key
+from util import load_pincode_set, get_key, ist_time
 
 logger = get_logger('fetcher', path=root_dir, log_level=5)
 
@@ -94,10 +94,7 @@ def check_slot_get_response(pincode_info, pincode, age):
     age = int(age)
 
     timestamp, slots = check_slots_available(pincode_info, pincode, age)
-    timestamp_str = timestamp \
-        .replace(tzinfo=pytz.utc) \
-        .astimezone(pytz.timezone('Asia/Kolkata')) \
-        .strftime('%d-%m-%Y %I:%M %p')
+    timestamp_str = ist_time(timestamp).strftime('%d-%m-%Y %I:%M %p')
 
     if slots is None:
         response_type = 'none'
@@ -186,7 +183,7 @@ def fetch(all_user_info, min_time_diff_seconds):
         logger.log(INFO, f'Fetching for pincode [{pincode}].')
 
         curr_timestamp = datetime.utcnow()
-        date_today = curr_timestamp.strftime('%d-%m-%Y')
+        # date_today = curr_timestamp.strftime('%d-%m-%Y')
 
         # we can afford to have stale information here since this just to calculate time diff.
         # Worst case scenario - pincode will be fetched closer than intended time gap
@@ -200,6 +197,7 @@ def fetch(all_user_info, min_time_diff_seconds):
                              f'already fetched within last [{time_diff_seconds}] seconds.')
             continue
 
+        date_today = ist_time(curr_timestamp).strftime('%d-%m-%Y')
         url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
               f'public/calendarByPin?pincode={pincode}&date={date_today}'
 
