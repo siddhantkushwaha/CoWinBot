@@ -47,7 +47,8 @@ def send_notifications(
                                              min_time_diff_btw_neg)
             if send_time is not None:
                 # wait if message was sent, to ease on telegram api
-                time.sleep(5)
+                # TODO experimental time gap decrease
+                time.sleep(2)
 
 
 def send_notification(

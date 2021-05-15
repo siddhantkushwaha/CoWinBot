@@ -104,7 +104,8 @@ def send_notifications_thread(pincode, pincode_meta):
                 })
 
                 # wait if message was sent, to ease on telegram api
-                time.sleep(5)
+                # TODO experimental time gap decrease
+                time.sleep(0.5)
 
 
 @app.route('/get', methods=['GET'])

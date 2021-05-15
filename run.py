@@ -27,5 +27,5 @@ if __name__ == '__main__':
             min_time_diff_btw_neg=24 * 3600
         )
 
-        # re-run every 1 minutes
-        time.sleep(1 * 60)
+        # re-run every 30 minutes
+        time.sleep(30 * 60)
