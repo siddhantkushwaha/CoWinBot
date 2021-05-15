@@ -43,9 +43,9 @@ def send_notifications(
                 logger.log(WARNING, '******** Impossible event, debug immediately. ********')
                 continue
 
-            ret = send_notification(user_id, pincode, age, pincode_info, user_info, min_time_diff_btw_pos,
-                                    min_time_diff_btw_neg)
-            if ret == 0:
+            _, send_time = send_notification(user_id, pincode, age, pincode_info, user_info, min_time_diff_btw_pos,
+                                             min_time_diff_btw_neg)
+            if send_time is not None:
                 # wait if message was sent, to ease on telegram api
                 time.sleep(5)
 
@@ -61,7 +61,7 @@ def send_notification(
 
         min_time_diff_btw_pos=12 * 3600,
         min_time_diff_btw_neg=24 * 3600
-) -> int:
+):
     curr_time = datetime.utcnow()
 
     notification_state = get_key(user_info, ['notificationState', f'{pincode}_{age}'], {})
@@ -79,14 +79,14 @@ def send_notification(
                       f"\n\n{response[0]}"
         else:
             logger.log(WARNING, '******** Impossible event, debug immediately. ********')
-            return 1
+            return None, None
 
     elif notification_type == 'negative':
         logger.log(DEBUG, f'Slots NOT found for user [{user_id}], pincode [{pincode}], age [{age}].')
         message = f"No slots available in pincode area {pincode}, for {age} year olds."
 
     else:
-        return 1
+        return None, None
 
     notify = False
 
@@ -126,13 +126,13 @@ def send_notification(
 
         dbHelper.update_user_info_set(user_id, {
             f'notificationState.{pincode}_{age}': {
-                'timestamp': datetime.utcnow(),
+                'timestamp': curr_time,
                 'type': notification_type
             }
         })
 
+        return notification_type, curr_time
+
     else:
         logger.log(INFO, f'Not notifying user [{user_id}].')
-        return 1
-
-    return 0
+        return None, None

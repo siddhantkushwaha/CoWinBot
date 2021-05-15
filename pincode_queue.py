@@ -11,7 +11,7 @@ from db import dbHelper
 from fetcher import get_all_pincodes, build_user_requests_by_pincode
 from notifier import send_notification
 from params import root_dir
-from util import load_pincode_set
+from util import load_pincode_set, set_key
 
 app = Flask(__name__)
 
@@ -95,8 +95,14 @@ def send_notifications_thread(pincode, pincode_meta):
                 logger.log(DEBUG, '******** Impossible event, debug immediately. ********')
                 continue
 
-            ret = send_notification(user_id, pincode, age, pincode_info, user_info)
-            if ret == 0:
+            notification_type, send_time = send_notification(user_id, pincode, age, pincode_info, user_info)
+            if send_time is not None:
+                # update cached object
+                set_key(user_info, ['notificationState', f'{pincode}_{age}'], {
+                    'timestamp': send_time,
+                    'type': notification_type
+                })
+
                 # wait if message was sent, to ease on telegram api
                 time.sleep(5)
 
