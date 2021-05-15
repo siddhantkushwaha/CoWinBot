@@ -115,11 +115,17 @@ def check_slot_get_response(pincode_info, pincode, age):
                             f"\nFee: {values['fee_type']}"
 
             for session in values['sessions']:
-                if session['capacity'] > 0:
+                session_capacity = session['capacity']
+                if session_capacity > 0:
+
+                    session_capacity_str = session_capacity
+                    if session_capacity <= 4:
+                        session_capacity_str += f"{session_capacity} (Someone probably canceled their appointment.)"
+
                     session_string = f"\n\nDate: {session['date']}" \
                                      f"\nVaccine name: {session['vaccine']}" \
                                      f"\nMinimum age: {session['min_age']}" \
-                                     f"\nCapacity: {session['capacity']}" \
+                                     f"\nCapacity: {session_capacity_str}" \
                                      f"\nSlots: {', '.join(session['slots'])}"
 
                     center_string += session_string
