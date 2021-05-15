@@ -172,8 +172,6 @@ def build_user_requests_by_pincode(all_user_info):
 
 
 def fetch(all_user_info, min_time_diff_seconds):
-    priority_pincodes = {263139}
-
     pincodes = get_all_pincodes(all_user_info)
     all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
 
@@ -191,7 +189,7 @@ def fetch(all_user_info, min_time_diff_seconds):
         last_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
 
         time_diff_seconds = (curr_timestamp - last_timestamp).total_seconds()
-        if pincode not in priority_pincodes and time_diff_seconds < min_time_diff_seconds:
+        if time_diff_seconds < min_time_diff_seconds:
             logger.log(INFO, f'Skipping pincode [{pincode}] because it was '
                              f'already fetched within last [{time_diff_seconds}] seconds.')
             continue
