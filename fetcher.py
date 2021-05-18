@@ -2,7 +2,6 @@ import json
 import time
 from datetime import datetime
 
-import pytz
 import requests
 
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING

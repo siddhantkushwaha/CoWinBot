@@ -1,6 +1,6 @@
 import queue
-import time
 import random
+import time
 from datetime import datetime
 from threading import Thread
 
@@ -134,6 +134,7 @@ def index_pincode():
         logger.log(INFO, f'Metadata received for pincode [{pincode}].')
         logger.log(DEBUG, meta)
 
+        dbHelper.get_or_create_pincode_info(pincode)
         ret = dbHelper.update_pincode_info_set(pincode, {'meta': meta})
         if ret == 0:
             logger.log(INFO, f'Data update success for [{pincode}].')
