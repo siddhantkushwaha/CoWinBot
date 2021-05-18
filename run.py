@@ -1,3 +1,7 @@
+"""
+    Now deprecated
+"""
+
 import time
 
 from customLogging import get_logger, INFO
