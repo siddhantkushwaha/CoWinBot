@@ -17,8 +17,8 @@ def get_user_info(user_id):
     return data
 
 
-def get_user_info_all():
-    data = db.userInfo.find()
+def get_user_info_all(filters=None, sort=None):
+    data = db.userInfo.find(filter=filters, sort=sort)
     return data
 
 
@@ -132,8 +132,8 @@ def get_pincode_info(pincode):
     return data
 
 
-def get_pincode_info_all():
-    data = db.pinCodeInfo.find()
+def get_pincode_info_all(filters=None, sort=None):
+    data = db.pinCodeInfo.find(filter=filters, sort=sort)
     return data
 
 

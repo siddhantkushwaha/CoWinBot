@@ -28,7 +28,7 @@ def is_pincode_valid(pincode):
 
 
 def beautify(string):
-    return ' '.join([i.capitalize() for i in string.lower().split()])
+    return ' '.join([i.capitalize() for i in str(string).lower().split()])
 
 
 def get_address_by_pincode(pincode):
