@@ -11,15 +11,14 @@ from db import dbHelper
 from fetcher import get_all_pincodes, build_user_requests_by_pincode
 from notifier import send_notification
 from params import root_dir
-from util import load_pincode_set, set_key
+from pincode_data import is_pincode_valid
+from util import set_key
 
 app = Flask(__name__)
 
 process_queue = queue.Queue()
 user_requests_by_pincode = dict()
 user_info_by_user_id = dict()
-
-valid_pincodes = load_pincode_set()
 
 logger = get_logger('pincode_queue', path=root_dir, log_level=5)
 
@@ -130,7 +129,7 @@ def index_pincode():
     pincode = int(data['pincode'])
     meta = data['meta']
 
-    if pincode in valid_pincodes:
+    if is_pincode_valid(pincode):
         logger.log(INFO, f'Metadata received for pincode [{pincode}].')
         logger.log(DEBUG, meta)
 

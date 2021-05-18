@@ -8,14 +8,11 @@ from customLogging import get_logger, INFO, DEBUG, DATA
 from db import dbHelper
 from fetcher import check_slot_get_response
 from params import tokens, root_dir
-from util import load_pincode_set, load_pincode_dic
+from pincode_data import is_pincode_valid, get_address_by_pincode
 
 logger = get_logger('telegram', path=root_dir, log_level=5)
 
 token = tokens['cowinbot']
-
-pin_code_set = load_pincode_set()
-pin_code_dic = load_pincode_dic()
 
 
 def log(user_id, level, message):
@@ -130,14 +127,12 @@ def text_commands(update, context):
                 log(user_id, DEBUG, f'Pincode [{pincode}] or age [{age}] is invalid.')
             else:
                 pincode = int(pincode)
-                is_pincode_valid = pincode in pin_code_set
-                if not is_pincode_valid:
+                if not is_pincode_valid(pincode):
                     response = f"Can't locate pincode, try again."
                     log(user_id, DEBUG, f'Cannot find pincode [{pincode}].')
                 else:
 
-                    pincode_info = pin_code_dic[pincode]
-                    response = f"Pincode found for area: {pincode_info['Taluk']}, {pincode_info['divisionname']}, {pincode_info['circlename']}."
+                    response = f"Pincode found for area: {get_address_by_pincode(pincode)}."
 
                     # Sending two messages here, this is not good idea to do everywhere
                     context.bot.send_message(chat_id=user_id, text=response)

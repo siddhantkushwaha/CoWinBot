@@ -7,7 +7,8 @@ import requests
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
 from db import dbHelper
 from params import root_dir
-from util import load_pincode_set, get_key, ist_time
+from pincode_data import is_pincode_valid
+from util import get_key, ist_time
 
 logger = get_logger('fetcher', path=root_dir, log_level=5)
 
@@ -141,15 +142,13 @@ def check_slot_get_response(pincode_info, pincode, age):
 def get_all_pincodes(all_user_info):
     logger.log(INFO, 'Fetching pincodes from existing user requests.')
 
-    valid_pincode_set = load_pincode_set()
-
     pincodes = set()
     invalid_pincodes = set()
 
     for user_info in all_user_info:
         user_request = dbHelper.get_requests_userinfo(user_info)
         for pincode, age in user_request:
-            if pincode in valid_pincode_set:
+            if is_pincode_valid(pincode):
                 pincodes.add(pincode)
             else:
                 invalid_pincodes.add(pincode)

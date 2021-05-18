@@ -6,11 +6,9 @@ from customLogging import get_logger, INFO, DEBUG, DATA, WARNING
 from db import dbHelper
 from fetcher import check_slot_get_response, get_all_pincodes, build_user_requests_by_pincode
 from params import root_dir
-from util import load_pincode_set, get_key
+from util import get_key
 
 logger = get_logger('notifier', path=root_dir, log_level=5)
-
-valid_pincode_set = load_pincode_set()
 
 
 def send_notifications(
