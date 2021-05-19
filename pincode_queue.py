@@ -20,6 +20,8 @@ process_queue = queue.Queue()
 user_requests_by_pincode = dict()
 user_info_by_user_id = dict()
 
+last_time_fetched = dict()
+
 logger = get_logger('pincode_queue', path=root_dir, log_level=5)
 
 
@@ -76,16 +78,9 @@ def init_worker_thread(name, target):
     th.start()
 
 
-def send_notifications_thread(pincode, pincode_meta):
+def send_notifications_thread(pincode, pincode_info):
     by_pincode = user_requests_by_pincode.get(pincode, set())
     if len(by_pincode) > 0:
-
-        # create info obj instead of fetching from db
-        pincode_info = {
-            'modifiedTime': datetime.utcnow(),
-            'meta': pincode_meta
-        }
-
         for user_id, age in by_pincode:
 
             # user_info dic is updated every 5 minutes by another thread
@@ -129,25 +124,48 @@ def index_pincode():
     pincode = int(data['pincode'])
     meta = data['meta']
 
-    if is_pincode_valid(pincode):
+    # users who requested this pincode
+    user_set = user_requests_by_pincode.get(pincode, set())
+
+    if is_pincode_valid(pincode) and len(user_set) > 0:
         logger.log(INFO, f'Metadata received for pincode [{pincode}].')
         logger.log(DEBUG, meta)
 
+        curr_time = datetime.utcnow()
+        last_update_time = last_time_fetched.get(pincode, datetime.fromtimestamp(0))
+        time_diff_seconds = (curr_time - last_update_time).total_seconds()
+
+        if time_diff_seconds < 10:
+            logger.log(INFO, f'Data was fetched very recently, {time_diff_seconds} seconds.')
+            return {'error': 2}
+
+        pincode_info = {
+            'modifiedTime': curr_time,
+            'meta': meta
+        }
+
         dbHelper.get_or_create_pincode_info(pincode)
-        ret = dbHelper.update_pincode_info_set(pincode, {'meta': meta})
+        ret = dbHelper.update_pincode_info_set(pincode, pincode_info)
         if ret == 0:
             logger.log(INFO, f'Data update success for [{pincode}].')
         else:
             logger.log(INFO, f'Failed to save to db.')
+            return {'error': 1}
 
-        notification_th = Thread(target=send_notifications_thread, args=[pincode, meta])
+        last_time_fetched[pincode] = curr_time
+
+        notification_th = Thread(target=send_notifications_thread, args=[pincode, pincode_info])
         notification_th.start()
 
         return {'error': 0}
-    else:
-        logger.log(INFO, f'Invalid pincode [{pincode}]. Something wrong with worker code?')
 
-        return {'error': 1}
+    elif is_pincode_valid(pincode):
+        logger.log(INFO, f'No user requested for [{pincode}].')
+        return {'error': 4}
+
+    else:
+        logger.log(INFO, f'Invalid pincode [{pincode}].')
+        return {'error': 3}
 
 
 if __name__ == '__main__':

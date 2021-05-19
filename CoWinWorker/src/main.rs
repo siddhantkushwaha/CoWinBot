@@ -1,7 +1,6 @@
 use chrono;
 
 use std::collections::HashMap;
-use std::env;
 use std::thread;
 use std::time::Duration;
 
@@ -48,32 +47,41 @@ fn index_pincode(server_url: &str, pincode: i32, data: String) -> Result<i32, re
     return Ok(error_code);
 }
 
+fn get_int_input() -> i32 {
+    let mut input_text = String::new();
+    std::io::stdin()
+        .read_line(&mut input_text)
+        .expect("Failed to read user input.");
+
+    let input_int = match input_text.trim().parse::<i32>() {
+        Ok(i) => i,
+        Err(_err) => -1,
+    };
+
+    return input_int;
+}
+
 fn main() {
-    println!(
-        "
-    ----------------------------------------------------
-        Worker node for CoWinBot. Thanks for helping!
+    println!("\n\n----------------Worker node for t.me/vaccinecowinbot----------------\n\n");
 
-                   t.me/vaccinecowinbot
-    ----------------------------------------------------\n\n"
-    );
+    println!("Do you want this process to prioritise a pincode? Enter valid pincode, then press enter. To skip, press Enter.");
+    let prioritise_pincode = get_int_input();
+    let mut option = -1;
 
-    let args: Vec<String> = env::args().collect();
-
-    let prioritise_pincode;
-    if args.len() > 1 {
-        prioritise_pincode = match args[1].parse::<i32>() {
-            Ok(i) => i,
-            Err(_err) => -1,
-        };
-    } else {
-        prioritise_pincode = -1;
+    if prioritise_pincode > 0 {
+        println!("How often do you want to check? \n\n1. Every 10 seconds. \n2. Every 20 seconds. \n3. Every 30 seconds. \n4. Every 40 seconds. \n5. Every 50 seconds. \n6. Every minute. \n\nChoose from options 1 to 6.");
+        option = get_int_input();
+        if option < 1 || option > 6 {
+            println!("Invalid option was chosen.");
+            return;
+        }
     }
 
     if prioritise_pincode > 0 {
         println!(
-            "Pincode [{}] will be priortised by this node.\n",
-            prioritise_pincode
+            "Pincode [{}] will be checked by this node every [{}] seconds.\n",
+            prioritise_pincode,
+            option * 10
         );
     }
 
@@ -81,12 +89,14 @@ fn main() {
 
     let mut i = 0;
     loop {
-        thread::sleep(Duration::from_secs(10));
+        if i > 0 {
+            thread::sleep(Duration::from_secs(10));
+        }
 
         println!("\n--------------- new iteration --------------");
 
         let pincode;
-        if i == 0 && prioritise_pincode > 0 {
+        if prioritise_pincode > 0 && (i % option) == 0 {
             pincode = prioritise_pincode;
         } else {
             pincode = match get_pincode(server_url) {
@@ -118,12 +128,20 @@ fn main() {
             }
         };
 
-        println!(
-            "Indexed data for pincode [{}], return code [{}].",
-            pincode, index_error_code
-        );
+        let message = if index_error_code == 0 {
+            "Data saved."
+        } else if index_error_code == 2 {
+            "Some other node had recently submitted data for this pincode."
+        } else if index_error_code == 3 {
+            "This is not a valid pincode."
+        } else if index_error_code == 4 {
+            "No user requested for this pincode."
+        } else {
+            "Failed to save information."
+        };
+
+        println!("Pincode [{}], message [{}].", pincode, message);
 
         i += 1;
-        i %= 5;
     }
 }
