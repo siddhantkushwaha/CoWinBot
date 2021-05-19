@@ -91,7 +91,16 @@ def start(update, context):
                  "\n\nTo list all requests registered by you, send command 'list'. " \
                  "\n\nTo stop getting notifications, send command 'stop'." \
                  "\n\nReport issues at t.me/siddhantkushwaha"
+
     context.bot.send_message(chat_id=user_id, text=start_text)
+
+    # Let's see how many decide to help.
+    second_text = "Data for your pincode may not be getting checked as frequently as you'd like." \
+                  "\n\nYou can help update bot's database more frequently by running a process available on Google Drive here https://cutt.ly/AbJbynB" \
+                  "\n\nCheck attached screenshot to learn how you can help."
+    screenshot_url = "https://github.com/siddhantkushwaha/siddhantkushwaha.github.io/raw/master/assets/img/screen.PNG"
+
+    context.bot.send_photo(chat_id=user_id, caption=second_text, photo=screenshot_url)
 
 
 def text_commands(update, context):
