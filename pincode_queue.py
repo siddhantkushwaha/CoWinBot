@@ -103,7 +103,7 @@ def send_notifications_thread(pincode, pincode_meta):
                 })
 
                 # wait if message was sent, to ease on telegram api
-                # TODO experimental time gap decrease
+                # notifications are sent in short bursts (experimental)
                 time.sleep(0.5)
 
 

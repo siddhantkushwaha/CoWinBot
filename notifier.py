@@ -1,52 +1,13 @@
-import time
 from datetime import datetime
 
 import telebot
 from customLogging import get_logger, INFO, DEBUG, DATA, WARNING
 from db import dbHelper
-from fetcher import check_slot_get_response, get_all_pincodes, build_user_requests_by_pincode
+from fetcher import check_slot_get_response
 from params import root_dir
 from util import get_key
 
 logger = get_logger('notifier', path=root_dir, log_level=5)
-
-
-def send_notifications(
-        all_user_info,
-        min_time_diff_btw_pos,
-        min_time_diff_btw_neg
-):
-    logger.log(INFO, '-------------- Initiating sending notifications --------------')
-
-    user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
-    all_pincodes = get_all_pincodes(all_user_info)
-
-    user_info_by_user_id = {i['userId']: i for i in all_user_info}
-    all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
-
-    for pincode in all_pincodes:
-
-        # using cached pincode info here, can't make too many db calls
-        pincode_info = all_pincode_info_dic.get(pincode, None)
-
-        by_pincode = user_requests_by_pincode.get(pincode, set())
-
-        for user_id, age in by_pincode:
-
-            # user info here will have stale notification state, it can also be modified during REST calls
-            # but I don't want to do repeated db queries for this
-            # worst case scenario - user could get same notification twice
-            user_info = user_info_by_user_id.get(user_id, None)
-            if user_info is None:
-                logger.log(WARNING, '******** Impossible event, debug immediately. ********')
-                continue
-
-            _, send_time = send_notification(user_id, pincode, age, pincode_info, user_info, min_time_diff_btw_pos,
-                                             min_time_diff_btw_neg)
-            if send_time is not None:
-                # wait if message was sent, to ease on telegram api
-                # TODO experimental time gap decrease
-                time.sleep(2)
 
 
 def send_notification(

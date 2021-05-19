@@ -157,7 +157,7 @@ def text_commands(update, context):
                         context.bot.send_message(chat_id=user_id, text=res)
                         time.sleep(2)
 
-                    # Updating notification state for this user so that, notifier module doesn't send
+                    # Updating notification state for this user so that notifier module doesn't send
                     # notifications to this user immediately
                     log(user_id, DEBUG, f'Updating notification state, type [{response_type}]')
                     dbHelper.update_user_info_set(user_id, {

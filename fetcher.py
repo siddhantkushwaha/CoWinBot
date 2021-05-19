@@ -1,8 +1,5 @@
 import json
-import time
 from datetime import datetime
-
-import requests
 
 from customLogging import get_logger, DATA, DEBUG, INFO, WARNING
 from db import dbHelper
@@ -28,7 +25,7 @@ def check_slots_available(pincode_info, pincode, age):
 
     slots_data = {}
 
-    # if date available for this pincode is too old, disregard it
+    # if date available for this pincode is too old, discard it
     if pincode_data is not None and is_data_within_one_day:
         pincode_data = json.loads(pincode_data)
         for center in pincode_data['centers']:
@@ -116,19 +113,18 @@ def check_slot_get_response(pincode_info, pincode, age):
 
             for session in values['sessions']:
                 session_capacity = session['capacity']
-                if session_capacity > 0:
+                session_capacity_str = session_capacity
 
-                    session_capacity_str = session_capacity
-                    if session_capacity <= 4:
-                        session_capacity_str += f"{session_capacity} (Someone probably canceled their appointment.)"
+                if session_capacity <= 4:
+                    session_capacity_str += f"{session_capacity} (Someone probably canceled their appointment.)"
 
-                    session_string = f"\n\nDate: {session['date']}" \
-                                     f"\nVaccine name: {session['vaccine']}" \
-                                     f"\nMinimum age: {session['min_age']}" \
-                                     f"\nCapacity: {session_capacity_str}" \
-                                     f"\nSlots: {', '.join(session['slots'])}"
+                session_string = f"\n\nDate: {session['date']}" \
+                                 f"\nVaccine name: {session['vaccine']}" \
+                                 f"\nMinimum age: {session['min_age']}" \
+                                 f"\nCapacity: {session_capacity_str}" \
+                                 f"\nSlots: {', '.join(session['slots'])}"
 
-                    center_string += session_string
+                center_string += session_string
 
             center_string = center_string.strip()
             response.append(center_string)
@@ -173,64 +169,3 @@ def build_user_requests_by_pincode(all_user_info):
             res[pincode] = by_pincode
 
     return res
-
-
-def fetch(all_user_info, min_time_diff_seconds):
-    pincodes = get_all_pincodes(all_user_info)
-    all_pincode_info_dic = {i['pincode']: i for i in dbHelper.get_pincode_info_all()}
-
-    logger.log(INFO, f'**** number of pincodes in request database [{len(pincodes)}] *****')
-
-    for pincode in pincodes:
-        logger.log(INFO, f'Fetching for pincode [{pincode}].')
-
-        curr_timestamp = datetime.utcnow()
-
-        # we can afford to have stale information here since this just to calculate time diff.
-        # Worst case scenario - pincode will be fetched closer than intended time gap
-        pincode_info = all_pincode_info_dic.get(pincode, {})
-
-        last_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
-
-        time_diff_seconds = (curr_timestamp - last_timestamp).total_seconds()
-        if time_diff_seconds < min_time_diff_seconds:
-            logger.log(INFO, f'Skipping pincode [{pincode}] because it was '
-                             f'already fetched within last [{time_diff_seconds}] seconds.')
-            continue
-
-        date_today = ist_time(curr_timestamp).strftime('%d-%m-%Y')
-        url = f'https://cdn-api.co-vin.in/api/v2/appointment/sessions/' \
-              f'public/calendarByPin?pincode={pincode}&date={date_today}'
-
-        logger.log(DEBUG, f'API url for pincode [{pincode}] is [{url}].')
-
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 '
-                          '(KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
-        }
-        response = requests.get(url, headers=headers)
-
-        if response.status_code != 200:
-            exception = Exception(f'Failed to fetch data for pincode [{pincode}], '
-                                  f'response code [{response.status_code}].')
-            logger.exception(exception)
-            raise exception
-
-        meta = response.content.decode()
-
-        if len(pincode_info) == 0:
-            pincode_info = dbHelper.create_pincode_info(pincode)
-            if pincode_info is None:
-                logger.log(INFO, f'Failed to create object for pincode [{pincode}].')
-                continue
-            else:
-                logger.log(INFO, f'Object created for pincode [{pincode}].')
-
-        ret = dbHelper.update_pincode_info_set(pincode, {'meta': meta})
-        if ret == 0:
-            logger.log(INFO, f'Data update success for [{pincode}].')
-        else:
-            logger.log(INFO, f'Failed to save to db.')
-
-        # Go easy on the api
-        time.sleep(10)
