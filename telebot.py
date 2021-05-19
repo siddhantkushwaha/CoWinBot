@@ -200,6 +200,10 @@ def text_commands(update, context):
     else:
         response = 'Invalid command. Use /start to see valid commands.'
 
+        # group
+        if user_id < 0:
+            response = None
+
     if type(response) == str and len(response) > 0:
         log(user_id, INFO, f'Final response sent.')
         log(user_id, DATA, response)
