@@ -61,15 +61,13 @@ def get_from_queue():
     return pincode
 
 
-def populate_process_queue():
+def populate_process_queue(all_user_info):
     # clear process_queue
     pincode = get_from_queue()
     while pincode is not None:
         pincode = get_from_queue()
 
     # populate again
-    all_user_info = dbHelper.get_user_info_all()
-
     pincodes = [i for i in get_all_pincodes(all_user_info)]
     random.shuffle(pincodes)
 
@@ -77,33 +75,32 @@ def populate_process_queue():
         process_queue.put(pincode)
 
 
-def worker_thread_func():
-    while True:
-        populate_process_queue()
-
-        # 1 hour
-        time.sleep(1 * 60 * 60)
-
-
-def worker_refresh_user_requests_by_pincode():
+def maintainer_thread():
     global user_requests_by_pincode, user_info_by_user_id
 
+    i = 0
     while True:
-        all_user_info = [i for i in dbHelper.get_user_info_all()]
+        try:
+            all_user_info = [i for i in dbHelper.get_user_info_all()]
 
-        user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
-        user_info_by_user_id = {i['userId']: i for i in all_user_info}
+            user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
 
-        num_workers = num_live_workers()
-        logger.log(INFO, f"*********** numworkers [{num_workers}] ***********")
+            user_info_by_user_id = {i['userId']: i for i in all_user_info}
+
+            # Every loop is about 5 minutes
+            # 12 * 5 minutes = 1 hour
+            if i % 12 == 0:
+                populate_process_queue(all_user_info)
+
+            num_workers = num_live_workers()
+            logger.log(INFO, f"*********** Number of workers [{num_workers}] ***********")
+
+            i += 1
+        except Exception as e:
+            logger.exception(e)
 
         # 5 minutes
         time.sleep(5 * 60)
-
-
-def init_worker_thread(name, target):
-    th = Thread(name=name, target=target)
-    th.start()
 
 
 def send_notifications_thread(pincode, pincode_info):
@@ -234,14 +231,8 @@ def index_pincode():
 
 
 if __name__ == '__main__':
-    init_worker_thread(
-        name='cowin_pincode_queue_worker',
-        target=worker_thread_func
-    )
-
-    init_worker_thread(
-        name='cowin_requests_by_pincode_worker',
-        target=worker_refresh_user_requests_by_pincode
-    )
+    # starting maintainer thread
+    th = Thread(name='maintainer_thread', target=maintainer_thread())
+    th.start()
 
     app.run(host='0.0.0.0', port=5000)
