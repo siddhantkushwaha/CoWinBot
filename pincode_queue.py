@@ -1,3 +1,4 @@
+import json
 import queue
 import random
 import time
@@ -6,7 +7,8 @@ from threading import Thread
 
 from flask import Flask, request
 
-from customLogging import get_logger, INFO, DEBUG
+import aesutil
+from customLogging import get_logger, INFO, DEBUG, WARNING
 from db import dbHelper
 from fetcher import get_all_pincodes, build_user_requests_by_pincode
 from notifier import send_notification
@@ -23,6 +25,14 @@ user_info_by_user_id = dict()
 last_time_fetched = dict()
 
 logger = get_logger('pincode_queue', path=root_dir, log_level=5)
+
+
+def is_string_json(string):
+    try:
+        json.loads(string)
+        return True
+    except:
+        return False
 
 
 def get_from_queue():
@@ -121,15 +131,42 @@ def index_pincode():
         indexes a pin-code's info returned by worker nodes
     """
     data = request.form
+    client_ip = request.remote_addr
+
     pincode = int(data['pincode'])
-    meta = data['meta']
+    meta_encrypted = data['meta']
+
+    key = f'{pincode}_{client_ip}'
+    iv = f'{pincode}_{client_ip}'
+
+    meta = None
+    try:
+        meta = aesutil.decrypt(meta_encrypted, key, iv)
+        meta = meta.decode()
+    except:
+        meta = None
+
+    if meta is None or len(meta) == 0:
+        logger.log(WARNING, f'Unsafe/Invalid data sent for pincode [{pincode}] from ip [{client_ip}].')
+        logger.log(DEBUG, meta)
+        return {'error': 5}
+
+    if not meta.startswith(f'{pincode}_'):
+        logger.log(WARNING, f'Unsafe/Invalid data sent for pincode [{pincode}] from ip [{client_ip}].')
+        logger.log(DEBUG, meta)
+        return {'error': 5}
+
+    meta = meta[7:]
+    if not is_string_json(meta):
+        logger.log(WARNING, f'Not JSON for pincode [{pincode}] from ip [{client_ip}].')
+        logger.log(DEBUG, meta)
+        return {'error': 5}
 
     # users who requested this pincode
     user_set = user_requests_by_pincode.get(pincode, set())
 
     if is_pincode_valid(pincode) and len(user_set) > 0:
         logger.log(INFO, f'Metadata received for pincode [{pincode}].')
-        logger.log(DEBUG, meta)
 
         curr_time = datetime.utcnow()
         last_update_time = last_time_fetched.get(pincode, datetime.fromtimestamp(0))

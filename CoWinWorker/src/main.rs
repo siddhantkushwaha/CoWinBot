@@ -2,9 +2,33 @@ use chrono;
 
 use std::collections::HashMap;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use reqwest::header::USER_AGENT;
+
+use magic_crypt::MagicCryptTrait;
+
+fn encrypt_aes256(text: &String, key: &String, iv: &String) -> String {
+    let mc = magic_crypt::new_magic_crypt!(key, 256, iv);
+    let base64 = mc.encrypt_str_to_base64(text);
+    return base64;
+}
+
+fn decrypt_aes256(text: &String, key: &String, iv: &String) -> String {
+    let mc = magic_crypt::new_magic_crypt!(key, 256, iv);
+    let plain_text: String = match mc.decrypt_base64_to_string(text) {
+        Ok(i) => i,
+        Err(_err) => String::from(""),
+    };
+    return plain_text;
+}
+
+fn get_external_ip() -> Result<String, reqwest::Error> {
+    let client = reqwest::blocking::Client::new();
+    let url = "https://ifconfig.me/ip";
+    let ip = client.get(url).send()?.text()?;
+    return Ok(ip);
+}
 
 fn get_pincode(server_url: &str) -> Result<i32, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
@@ -85,7 +109,8 @@ fn main() {
         );
     }
 
-    let server_url = "http://sid.centralindia.cloudapp.azure.com:5000";
+    let mut ip = String::from("");
+    let server_url = "http://localhost:5000";
 
     let mut i = 0;
     loop {
@@ -94,6 +119,7 @@ fn main() {
         }
 
         println!("\n--------------- new iteration --------------");
+        let now = Instant::now();
 
         let pincode;
         if prioritise_pincode > 0 && (i % option) == 0 {
@@ -108,6 +134,11 @@ fn main() {
             };
         }
 
+        if pincode <= 0 {
+            println!("Failed to fetch pincode from server.");
+            continue;
+        }
+
         println!("Got pincode [{}].", pincode);
 
         let pincode_info = match get_info_for_pincode(pincode) {
@@ -120,7 +151,24 @@ fn main() {
 
         println!("Fetched data for pincode [{}].", pincode);
 
-        let index_error_code = match index_pincode(server_url, pincode, pincode_info) {
+        // avoid updating so frequently, do it every 5 minutes, each loop takes about 10 seconds
+        if i % 30 == 0 {
+            ip = match get_external_ip() {
+                Ok(res) => res,
+                Err(_err) => {
+                    println!("Failed to fetch client metadata.");
+                    continue;
+                }
+            };
+        }
+
+        let key = format!("{}_{}", pincode, ip);
+        let iv = format!("{}_{}", pincode, ip);
+        let raw_data = format!("{}_{}", pincode, pincode_info);
+
+        let encrypted_pincode_info = encrypt_aes256(&raw_data, &key, &iv);
+
+        let index_error_code = match index_pincode(server_url, pincode, encrypted_pincode_info) {
             Ok(i) => i,
             Err(_err) => {
                 println!("Failed to index pincode [{}] to server.", pincode);
@@ -136,12 +184,13 @@ fn main() {
             "This is not a valid pincode."
         } else if index_error_code == 4 {
             "No user requested for this pincode."
+        } else if index_error_code == 5 {
+            "Data not from trusted source."
         } else {
             "Failed to save information."
         };
 
         println!("Pincode [{}], message [{}].", pincode, message);
-
         i += 1;
     }
 }
