@@ -119,8 +119,7 @@ fn main() {
         }
 
         println!("\n--------------- new iteration --------------");
-        let now = Instant::now();
-
+        
         let pincode;
         if prioritise_pincode > 0 && (i % option) == 0 {
             pincode = prioritise_pincode;
