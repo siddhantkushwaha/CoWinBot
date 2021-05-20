@@ -232,7 +232,7 @@ def index_pincode():
 
 if __name__ == '__main__':
     # starting maintainer thread
-    th = Thread(name='maintainer_thread', target=maintainer_thread())
+    th = Thread(name='maintainer_thread', target=maintainer_thread)
     th.start()
 
     app.run(host='0.0.0.0', port=5000)
