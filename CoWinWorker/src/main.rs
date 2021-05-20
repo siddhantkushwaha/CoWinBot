@@ -110,7 +110,7 @@ fn main() {
     }
 
     let mut ip = String::from("");
-    let server_url = "http://localhost:5000";
+    let server_url = "http://sid.centralindia.cloudapp.azure.com:5000";
 
     let mut i = 0;
     loop {
