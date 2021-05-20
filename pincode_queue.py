@@ -19,10 +19,12 @@ from util import set_key
 app = Flask(__name__)
 
 process_queue = queue.Queue()
+
 user_requests_by_pincode = dict()
 user_info_by_user_id = dict()
 
-last_time_fetched = dict()
+last_time_fetched_for_pincode = dict()
+last_time_pinged_ip = dict()
 
 logger = get_logger('pincode_queue', path=root_dir, log_level=5)
 
@@ -33,6 +35,19 @@ def is_string_json(string):
         return True
     except:
         return False
+
+
+def num_live_workers():
+    """
+        Returns an approximate number of workers running currently
+    """
+
+    curr_time = datetime.utcnow()
+    for worker_ip, worker_ping_time in last_time_pinged_ip.items():
+        time_diff = (curr_time - worker_ping_time).total_seconds()
+        if time_diff > 300:
+            last_time_pinged_ip.pop(worker_ip, None)
+    return len(last_time_pinged_ip)
 
 
 def get_from_queue():
@@ -79,6 +94,9 @@ def worker_refresh_user_requests_by_pincode():
         user_requests_by_pincode = build_user_requests_by_pincode(all_user_info)
         user_info_by_user_id = {i['userId']: i for i in all_user_info}
 
+        num_workers = num_live_workers()
+        logger.log(INFO, f"*********** numworkers [{num_workers}] ***********")
+
         # 5 minutes
         time.sleep(5 * 60)
 
@@ -117,6 +135,12 @@ def get_pincode():
     """
         returns a pincode for the worker node to process
     """
+    curr_time = datetime.utcnow()
+
+    client_ip = request.remote_addr
+
+    last_time_pinged_ip[client_ip] = curr_time
+
     pincode = get_from_queue()
     if pincode is not None:
         logger.log(DEBUG, f'Moving [{pincode}] to end of queue.')
@@ -130,8 +154,12 @@ def index_pincode():
     """
         indexes a pin-code's info returned by worker nodes
     """
+    curr_time = datetime.utcnow()
+
     data = request.form
     client_ip = request.remote_addr
+
+    last_time_pinged_ip[client_ip] = curr_time
 
     pincode = int(data['pincode'])
     meta_encrypted = data['meta']
@@ -168,8 +196,7 @@ def index_pincode():
     if is_pincode_valid(pincode) and len(user_set) > 0:
         logger.log(INFO, f'Metadata received for pincode [{pincode}].')
 
-        curr_time = datetime.utcnow()
-        last_update_time = last_time_fetched.get(pincode, datetime.fromtimestamp(0))
+        last_update_time = last_time_fetched_for_pincode.get(pincode, datetime.fromtimestamp(0))
         time_diff_seconds = (curr_time - last_update_time).total_seconds()
 
         if time_diff_seconds < 10:
@@ -177,8 +204,9 @@ def index_pincode():
             return {'error': 2}
 
         pincode_info = {
+            'updateTimePeriod': time_diff_seconds,
             'modifiedTime': curr_time,
-            'meta': meta
+            'meta': meta,
         }
 
         dbHelper.get_or_create_pincode_info(pincode)
@@ -189,7 +217,7 @@ def index_pincode():
             logger.log(INFO, f'Failed to save to db.')
             return {'error': 1}
 
-        last_time_fetched[pincode] = curr_time
+        last_time_fetched_for_pincode[pincode] = curr_time
 
         notification_th = Thread(target=send_notifications_thread, args=[pincode, pincode_info])
         notification_th.start()
