@@ -2,7 +2,7 @@ use chrono;
 
 use std::collections::HashMap;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use reqwest::header::USER_AGENT;
 
