@@ -116,7 +116,7 @@ def check_slot_get_response(pincode_info, pincode, age):
 
                 session_capacity_str = str(session_capacity)
                 if session_capacity <= 4:
-                    session_capacity_str += f"{session_capacity} (Someone probably canceled their appointment.)"
+                    session_capacity_str += " (Someone probably canceled their appointment.)"
 
                 session_string = f"\n\nDate: {session['date']}" \
                                  f"\nVaccine name: {session['vaccine']}" \

@@ -26,6 +26,8 @@ user_info_by_user_id = dict()
 last_time_fetched_for_pincode = dict()
 last_time_pinged_ip = dict()
 
+notification_critical_section = set()
+
 logger = get_logger('pincode_queue', path=root_dir, log_level=5)
 
 
@@ -114,6 +116,15 @@ def send_notifications_thread(pincode, pincode_info):
                 logger.log(DEBUG, '******** Impossible event, debug immediately. ********')
                 continue
 
+            # check if it is already being processed
+            notification_critical_section_key = f'{user_id}_{pincode}_{age}'
+            if notification_critical_section_key in notification_critical_section:
+                continue
+
+            notification_critical_section.add(notification_critical_section_key)
+
+            # -------------- this code is part of critical section
+
             notification_type, send_time = send_notification(user_id, pincode, age, pincode_info, user_info)
             if send_time is not None:
                 # update cached object
@@ -122,6 +133,11 @@ def send_notifications_thread(pincode, pincode_info):
                     'type': notification_type
                 })
 
+            # -----------------------------------------------------
+
+            notification_critical_section.remove(notification_critical_section_key)
+
+            if send_time is not None:
                 # wait if message was sent, to ease on telegram api
                 # notifications are sent in short bursts (experimental)
                 time.sleep(0.5)
