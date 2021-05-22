@@ -106,7 +106,7 @@ def maintainer_thread():
 
 
 def send_notifications_thread(pincode, pincode_info):
-    by_pincode = user_requests_by_pincode.get(pincode, {})
+    by_pincode = user_requests_by_pincode.get(pincode, set())
     if len(by_pincode) > 0:
         for user_id, age in by_pincode:
 
@@ -178,7 +178,7 @@ def index_pincode():
     meta_encrypted = data['meta']
 
     # users who requested this pincode
-    user_set = user_requests_by_pincode.get(pincode, {})
+    user_set = user_requests_by_pincode.get(pincode, set())
 
     if is_pincode_valid(pincode) and len(user_set) > 0:
 
