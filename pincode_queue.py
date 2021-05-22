@@ -8,7 +8,7 @@ from threading import Thread
 from flask import Flask, request
 
 import aesutil
-from customLogging import get_logger, INFO, DEBUG, WARNING
+from customLogging import get_logger, INFO, DEBUG, WARNING, DATA
 from db import dbHelper
 from fetcher import get_all_pincodes, build_user_requests_by_pincode
 from notifier import send_notification
@@ -106,7 +106,7 @@ def maintainer_thread():
 
 
 def send_notifications_thread(pincode, pincode_info):
-    by_pincode = user_requests_by_pincode.get(pincode, set())
+    by_pincode = user_requests_by_pincode.get(pincode, {})
     if len(by_pincode) > 0:
         for user_id, age in by_pincode:
 
@@ -177,37 +177,10 @@ def index_pincode():
     pincode = int(data['pincode'])
     meta_encrypted = data['meta']
 
-    key = f'{pincode}_{client_ip}'
-    iv = f'{pincode}_{client_ip}'
-
-    meta = None
-    try:
-        meta = aesutil.decrypt(meta_encrypted, key, iv)
-        meta = meta.decode()
-    except:
-        meta = None
-
-    if meta is None or len(meta) == 0:
-        logger.log(WARNING, f'Unsafe/Invalid data sent for pincode [{pincode}] from ip [{client_ip}].')
-        logger.log(DEBUG, meta)
-        return {'error': 5}
-
-    if not meta.startswith(f'{pincode}_'):
-        logger.log(WARNING, f'Unsafe/Invalid data sent for pincode [{pincode}] from ip [{client_ip}].')
-        logger.log(DEBUG, meta)
-        return {'error': 5}
-
-    meta = meta[7:]
-    if not is_string_json(meta):
-        logger.log(WARNING, f'Not JSON for pincode [{pincode}] from ip [{client_ip}].')
-        logger.log(DEBUG, meta)
-        return {'error': 5}
-
     # users who requested this pincode
-    user_set = user_requests_by_pincode.get(pincode, set())
+    user_set = user_requests_by_pincode.get(pincode, {})
 
     if is_pincode_valid(pincode) and len(user_set) > 0:
-        logger.log(INFO, f'Metadata received for pincode [{pincode}].')
 
         last_update_time = last_time_fetched_for_pincode.get(pincode, datetime.fromtimestamp(0))
         time_diff_seconds = (curr_time - last_update_time).total_seconds()
@@ -215,6 +188,38 @@ def index_pincode():
         if time_diff_seconds < 10:
             logger.log(INFO, f'Data was fetched very recently, {time_diff_seconds} seconds.')
             return {'error': 2}
+
+        # ------------------ Validate data sent -----------------
+
+        key = f'{pincode}_{client_ip}'
+        iv = f'{pincode}_{client_ip}'
+
+        try:
+            meta = aesutil.decrypt(meta_encrypted, key, iv)
+            meta = meta.decode()
+        except:
+            meta = None
+
+        if meta is None or len(meta) == 0:
+            logger.log(WARNING, f'Unsafe/Invalid data sent for pincode [{pincode}] from ip [{client_ip}].')
+            logger.log(DEBUG, meta)
+            return {'error': 5}
+
+        if not meta.startswith(f'{pincode}_'):
+            logger.log(WARNING, f'Unsafe/Invalid data sent for pincode [{pincode}] from ip [{client_ip}].')
+            logger.log(DEBUG, meta)
+            return {'error': 5}
+
+        meta = meta[7:]
+        if not is_string_json(meta):
+            logger.log(WARNING, f'Not JSON for pincode [{pincode}] from ip [{client_ip}].')
+            logger.log(DEBUG, meta)
+            return {'error': 5}
+
+        logger.log(INFO, f'Metadata received for pincode [{pincode}] from [{client_ip}].')
+        logger.log(DATA, meta)
+
+        # -------------------------------------------------------
 
         pincode_info = {
             'updateTimePeriod': time_diff_seconds,
