@@ -14,7 +14,7 @@ def check_slots_available(pincode_info, pincode, age):
     logger.log(INFO, f'Check slots for pincode [{pincode}].')
 
     pincode_data = get_key(pincode_info, ['meta'])
-    latest_timestamp = pincode_info.get('modifiedTime', datetime.fromtimestamp(0))
+    latest_timestamp = get_key(pincode_info, ['modifiedTime'], datetime.fromtimestamp(0))
 
     curr_time = datetime.utcnow()
     time_diff = curr_time - latest_timestamp
