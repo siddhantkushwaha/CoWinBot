@@ -9,7 +9,7 @@ from util import get_key, ist_time
 
 logger = get_logger('fetcher', path=root_dir, log_level=5)
 
-min_capacity = 5
+min_capacity = 1
 
 
 def check_slots_available(pincode_info, pincode, age):
