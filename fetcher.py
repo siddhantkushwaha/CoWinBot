@@ -9,6 +9,8 @@ from util import get_key, ist_time
 
 logger = get_logger('fetcher', path=root_dir, log_level=5)
 
+min_capacity = 5
+
 
 def check_slots_available(pincode_info, pincode, age):
     logger.log(INFO, f'Check slots for pincode [{pincode}].')
@@ -48,7 +50,7 @@ def check_slots_available(pincode_info, pincode, age):
                 vaccine = session['vaccine']
                 slots = session['slots']
 
-                if min_age <= age and capacity > 0:
+                if min_age <= age and capacity > min_capacity:
                     center_data = slots_data.get(name, {})
                     slots_data[name] = {
                         'name': name,
@@ -115,7 +117,9 @@ def check_slot_get_response(pincode_info, pincode, age):
                 session_capacity = session['capacity']
 
                 session_capacity_str = str(session_capacity)
-                if session_capacity <= 4:
+
+                # this will never be true now because of the check in 'check_slots_available'
+                if session_capacity <= min_capacity:
                     session_capacity_str += " (Someone probably canceled their appointment.)"
 
                 session_string = f"\n\nDate: {session['date']}" \
