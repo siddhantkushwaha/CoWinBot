@@ -111,12 +111,7 @@ def start(update, context):
 
     log(user_id, INFO, 'Start command received.')
 
-    '''start_text = "Hi! This bot helps check if any slot is available for vaccination for given area, given age. " \
-                 "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
-                 "\n\nTo list all requests registered by you, send command 'list'. " \
-                 "\n\nTo stop getting notifications, send command 'stop'." \
-                 "\n\nReport issues at t.me/siddhantkushwaha"
-''' 
+    
     start_text = """Hi \!
 This bot notifies you about availability  of slots for vaccination  in your area\.
 
@@ -143,16 +138,9 @@ Link - https://cutt.ly/AbJbynB .
 \nThis will help the bot to update its database more frequently.\n(Refer to the attached screenshot.)"""
 
     screenshot_url = "https://github.com/siddhantkushwaha/siddhantkushwaha.github.io/raw/master/assets/img/screen.PNG"
-    context.bot.send_photo(chat_id=user_id, caption=second_text, photo=screenshot_url)
 
     context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id = user_id, text = start_text)    
-
-
-
-    """second_text = "Data for your pincode may not get checked as frequently as you'd like." \
-                  "\n\nYou can help update bot's database more frequently by running a process available on Google Drive here https://cutt.ly/AbJbynB" \
-                  "\n\nCheck attached screenshot to learn how you can help."""
-
+    context.bot.send_photo(chat_id=user_id, caption=second_text, photo=screenshot_url)
 
 
 # My Edits
