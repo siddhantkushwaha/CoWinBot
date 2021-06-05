@@ -111,31 +111,47 @@ def start(update, context):
 
     log(user_id, INFO, 'Start command received.')
 
+    '''start_text = "Hi! This bot helps check if any slot is available for vaccination for given area, given age. " \
+                 "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
+                 "\n\nTo list all requests registered by you, send command 'list'. " \
+                 "\n\nTo stop getting notifications, send command 'stop'." \
+                 "\n\nReport issues at t.me/siddhantkushwaha"
+''' 
+    start_text = """Hi \!
+This bot notifies you about availability  of slots for vaccination  in your area\.
 
-    start_text = """Hi \!  This bot notifies you about the availability of slots for vaccination in your area\.
 
-__List of Commands__ :\-\n\n
+__List of Commands__ :\-
+
 1 \- To start receiving notifications\,
-          __click this__      \-\-\-\>       */request* \.\n
+          __click this__      \-\-\-\>       */request* \.
+
 2 \- To stop receiving notifications\,
-          __click this__      \-\-\-\>       */stop* \.\n
+          __click this__      \-\-\-\>       */stop* \.
+
 3 \- To list all your requests\,
-          __click this__      \-\-\-\>       */list* \.\n
+          __click this__      \-\-\-\>       */list* \.
+
 ```
 (You may also type these clickable commands instead\.)
 ```
 \nReport issues at t\.me/siddhantkushwaha \."""
 
     second_text = """To check data for your pincode more frequently, you may run this program available on Google Drive on your PC.
+
 Link - https://cutt.ly/AbJbynB .
 \nThis will help the bot to update its database more frequently.\n(Refer to the attached screenshot.)"""
 
     screenshot_url = "https://github.com/siddhantkushwaha/siddhantkushwaha.github.io/raw/master/assets/img/screen.PNG"
-    
-    context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id = user_id, text = start_text)    
     context.bot.send_photo(chat_id=user_id, caption=second_text, photo=screenshot_url)
 
+    context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id = user_id, text = start_text)    
 
+
+
+    """second_text = "Data for your pincode may not get checked as frequently as you'd like." \
+                  "\n\nYou can help update bot's database more frequently by running a process available on Google Drive here https://cutt.ly/AbJbynB" \
+                  "\n\nCheck attached screenshot to learn how you can help."""
 
 
 
@@ -315,6 +331,7 @@ def list(update, context) :
 click this   \-\-\-\>   */commands*"""  
     else:
         response = """You have no registered requests\.
+
 To register\, click this   \-\-\-\>   */request*"""
 
 
@@ -327,13 +344,17 @@ To register\, click this   \-\-\-\>   */request*"""
 def commands(update, context) :
     user_id = update.effective_chat.id
 
-    command_text = """__List of Commands__ :\-\n\n
+    command_text = """__List of Commands__ :\-
+
 1 \- To start receiving notifications\,
-          __click this__      \-\-\-\>       */request* \.\n
+          __click this__      \-\-\-\>       */request* \.
+
 2 \- To stop receiving notifications\,
-          __click this__      \-\-\-\>       */stop* \.\n
+          __click this__      \-\-\-\>       */stop* \.
+
 3 \- To list all your requests\,
-          __click this__      \-\-\-\>       */list* \.\n
+          __click this__      \-\-\-\>       */list* \.
+
 ``` You may also type these clickable commands instead\.```
 """
     context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id=user_id, text=command_text)
@@ -383,10 +404,10 @@ if __name__ == '__main__':
     conversation_handler = ConversationHandler(
         entry_points=[CommandHandler('request', request)],
         states={
-            AGE : [MessageHandler(filters=Filters.text, callback = age, pass_user_data=True)],   
+            AGE : [MessageHandler(filters=Filters.text & (~Filters.command), callback = age, pass_user_data=True)],   
            REQUEST: [CallbackQueryHandler(final, pass_user_data=True)]
         },
-        fallbacks=[MessageHandler(Filters.text & (~Filters.command), button_not_pressed),CommandHandler('exit', exit_request) ],
+        fallbacks=[MessageHandler(Filters.text & (~Filters.command), button_not_pressed),CommandHandler('exit', exit_request),CommandHandler('request', request) ],
     )
 
     dispatcher.add_handler(conversation_handler)
