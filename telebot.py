@@ -1,18 +1,38 @@
 import time
 from datetime import datetime
+from functools import wraps
 
 import requests
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import (ChatAction, InlineKeyboardButton, InlineKeyboardMarkup,
+                      ParseMode, ReplyKeyboardRemove, Update)
+from telegram.ext import (CallbackContext, CallbackQueryHandler,
+                          CommandHandler, ConversationHandler, Filters,
+                          MessageHandler, Updater)
 
-from customLogging import get_logger, INFO, DEBUG, DATA
+from customLogging import DATA, DEBUG, INFO, get_logger
 from db import dbHelper
 from fetcher import check_slot_get_response
-from params import tokens, root_dir
-from pincode_data import is_pincode_valid, get_address_by_pincode
+from params import root_dir, tokens
+from pincode_data import get_address_by_pincode, is_pincode_valid
 
 logger = get_logger('telegram', path=root_dir, log_level=5)
 
 token = tokens['cowinbot']
+
+user_temp_data = {}
+
+
+
+def send_typing_action(func):
+                                                                                                 # Bot is typing
+    @wraps(func)
+    def command_func(update, context, *args, **kwargs):
+        context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
+        return func(update, context,  *args, **kwargs)
+
+    return command_func
+
+
 
 
 def log(user_id, level, message):
@@ -34,6 +54,11 @@ def send_message(user_id, message):
     send_text = f'https://api.telegram.org/bot{token}/sendMessage?chat_id={user_id}&parse_mode=Markdown&text={message}'
     response = requests.get(send_text)
     return response.json()
+
+def send_messageMD2(user_id, message):
+    send_text = f'https://api.telegram.org/bot{token}/sendMessage?chat_id={user_id}&parse_mode=MarkdownV2&text={message}'
+    response = requests.get(send_text)
+    return response.json()    
 
 
 def send_photo_url(user_id, text, url):
@@ -86,139 +111,299 @@ def start(update, context):
 
     log(user_id, INFO, 'Start command received.')
 
-    start_text = "Hi! This bot helps check if any slot is available for vaccination for given area, given age. " \
-                 "\n\nTo get a notification as soon as slots are available, send command 'request <pin-code> <age>'. " \
-                 "\n\nTo list all requests registered by you, send command 'list'. " \
-                 "\n\nTo stop getting notifications, send command 'stop'." \
-                 "\n\nReport issues at t.me/siddhantkushwaha"
+    
+    start_text = """Hi \!
+This bot notifies you about availability  of slots for vaccination  in your area\.
 
-    context.bot.send_message(chat_id=user_id, text=start_text)
 
-    # Let's see how many decide to help.
-    second_text = "Data for your pincode may not get checked as frequently as you'd like." \
-                  "\n\nYou can help update bot's database more frequently by running a process available on Google Drive here https://cutt.ly/AbJbynB" \
-                  "\n\nCheck attached screenshot to learn how you can help."
+__List of Commands__ :\-
+
+1 \- To start receiving notifications\,
+          __click this__      \-\-\-\>       */request* \.
+
+2 \- To stop receiving notifications\,
+          __click this__      \-\-\-\>       */stop* \.
+
+3 \- To list all your requests\,
+          __click this__      \-\-\-\>       */list* \.
+
+```
+(You may also type these clickable commands instead\.)
+```
+\nReport issues at t\.me/siddhantkushwaha \."""
+
+    second_text = """To check data for your pincode more frequently, you may run this program available on Google Drive on your PC.
+
+Link - https://cutt.ly/AbJbynB .
+\nThis will help the bot to update its database more frequently.\n(Refer to the attached screenshot.)"""
+
     screenshot_url = "https://github.com/siddhantkushwaha/siddhantkushwaha.github.io/raw/master/assets/img/screen.PNG"
 
+    context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id = user_id, text = start_text)    
     context.bot.send_photo(chat_id=user_id, caption=second_text, photo=screenshot_url)
 
 
-def text_commands(update, context):
+# My Edits
+
+
+AGE, REQUEST = 0 , 1
+
+@send_typing_action
+def request(update: Update, _: CallbackContext) -> int :
+
+    # Conversation Started . Ask for Pincode.
+     
+    update.message.reply_text("Enter your Pincode")
+    return AGE
+
+@send_typing_action
+def age(update: Update, _: CallbackContext) -> int :
+
+    global user_temp_data
     user_id = update.effective_chat.id
+    pincode = update.message.text
+
+    if pincode == "/exit" :
+
+        exit_message =  """Exited\!  To see all valid commands\,
+click this   \-\-\-\>   */commands*"""
+
+        send_messageMD2(user_id ,exit_message )                                                 # If user chose to exit
+        return ConversationHandler.END    
+          
     update_user_meta(user_id, update)
 
-    command_text = update.message.text
+    log(user_id, INFO, f'Pincode [{pincode}] received.')
 
-    log(user_id, INFO, f'Text command [{command_text}] received.')
-
-    command_text = command_text.strip().lower()
-    command_args = command_text.split(' ')
-
-    command_type = command_args[0] if len(command_args) > 0 else 'invalid'
-
-    if command_type == 'request':
-        if len(command_args) < 3:
-            response = 'Invalid command. Use /start to see valid commands.'
-        else:
-            pincode = command_args[1]
-            age = command_args[2]
-
-            invalid_input = False
-
-            if not pincode.isnumeric():
-                invalid_input = True
-
-            elif not age.isnumeric() or int(age) < 1 or int(age) > 110:
-                invalid_input = True
-
-            if invalid_input:
-                response = 'Please check if pin-code and age provided are correct.'
-                log(user_id, DEBUG, f'Pincode [{pincode}] or age [{age}] is invalid.')
-            else:
-                pincode = int(pincode)
-                if not is_pincode_valid(pincode):
-                    response = f"Can't locate pincode, try again."
-                    log(user_id, DEBUG, f'Cannot find pincode [{pincode}].')
-                else:
-
-                    response = f"Pincode found for area: {get_address_by_pincode(pincode)}."
-
-                    # Sending two messages here, this is not good idea to do everywhere
-                    context.bot.send_message(chat_id=user_id, text=response)
-
-                    ret = dbHelper.add_request(user_id, pincode, age)
-                    if ret > 1:
-                        response = 'Failed to register request, please try again.'
-                    elif ret == 1:
-                        response = 'You can only have 4 registered requests at a time.'
-                    else:
-                        log(user_id, INFO, f'Request registered.')
-                        response = f'Your request has been registered. ' \
-                                   f'You will be notified when vaccine is available in area with ' \
-                                   f'pincode {pincode} for {age} year olds.'
-
-                    # Sending two messages here, this is not good idea to do everywhere
-                    context.bot.send_message(chat_id=user_id, text=response)
-
-                    pincode_info = dbHelper.get_pincode_info(pincode)
-                    response_type, response = check_slot_get_response(pincode_info, pincode, age)
-                    for res in response:
-                        context.bot.send_message(chat_id=user_id, text=res)
-                        time.sleep(2)
-
-                    # Updating notification state for this user so that notifier module doesn't send
-                    # notifications to this user immediately
-                    log(user_id, DEBUG, f'Updating notification state, type [{response_type}]')
-                    dbHelper.update_user_info_set(user_id, {
-                        f'notificationState.{pincode}_{age}': {
-                            'timestamp': datetime.utcnow(),
-                            'type': response_type
-                        }
-                    })
-
-    elif command_type == 'stop':
-        user_requests = dbHelper.get_requests(user_id)
-        if len(user_requests) > 0:
-            ret = dbHelper.remove_all_requests(user_id)
-            if ret > 0:
-                response = 'Operation failed, please try again.'
-            else:
-                response = 'You will not receive notifications.'
-        else:
-            response = 'You are not subscribed to notifications.'
-
-    elif command_type == 'list':
-        user_requests = dbHelper.get_requests(user_id)
-        if len(user_requests) > 0:
-            response = ''
-            for i, val in enumerate(user_requests, 1):
-                response += f"\n\n{i}. Pincode: {val[0]}, Age: {val[1]}"
-            response = response.strip()
-        else:
-            response = 'You have no registered requests'
+    if not pincode.isnumeric():
+        response = """Incorrect pincode \!\n\nEnter it again, or __press__   \-\-\>   */exit*"""
+        log(user_id, DEBUG, f'Pincode [{pincode}] is invalid.')
+        update.message.reply_text(response,parse_mode = ParseMode.MARKDOWN_V2)  
+        return AGE
 
     else:
-        response = 'Invalid command. Use /start to see valid commands.'
+        pincode = int(pincode)
+        if not is_pincode_valid(pincode):
+            response = f"Can\'t locate pincode\,\n\nEnter it again, or press   \-\-\>   */exit*"
+            log(user_id, DEBUG, f'Cannot find pincode [{pincode}].')
+            update.message.reply_text(response,parse_mode = ParseMode.MARKDOWN_V2)  
+            return AGE
+        else:
+            time.sleep(1.2)
+            response = f"Pincode found for area: {get_address_by_pincode(pincode)}."
+            update.message.reply_text(response)
+            
+            user_temp_data["user_id"] = user_id 
+            user_temp_data["pincode"] = pincode  
+                                        
+            button_list = [
+            [InlineKeyboardButton("Above 45", callback_data="46"),
+            InlineKeyboardButton("Below 45", callback_data="19")]]
 
-        # group
-        if user_id < 0:
-            response = None
+            
+
+            update.message.reply_text("Choose your age group:", reply_markup = InlineKeyboardMarkup(button_list))
+            return REQUEST                                     #   exit this function
+        
+    update.message.reply_text(response)                                                           
+    return ConversationHandler.END                                                           #   exit the ConversationHandler
+
+@send_typing_action
+def button_not_pressed(update: Update, _: CallbackContext) -> int :
+    button_list = [
+    [
+    InlineKeyboardButton("Above 45", callback_data="46"),
+    InlineKeyboardButton("Below 45", callback_data="19")
+    ],
+    [InlineKeyboardButton("Exit", callback_data="exit")]
+    ]
+
+    time.sleep(1.5)
+
+    update.message.reply_text("Please click on one of these options !\nYou may also choose to exit. ", reply_markup = InlineKeyboardMarkup(button_list))
+    return REQUEST                                   
+
+
+@send_typing_action
+def final(update: Update, _: CallbackContext) -> int :
+
+    global user_temp_data
+    query = update.callback_query
+    age = query.data
+    pincode = user_temp_data["pincode"]
+    user_id = user_temp_data["user_id"]
+ 
+    if age == "exit" :
+        exit_message =  """Exited\!  To see all valid commands\,
+click this   \-\-\-\>   */commands*"""
+        send_messageMD2(user_id ,exit_message )                                     # If user chose to exit
+        return ConversationHandler.END               
+
+
+    ret = dbHelper.add_request(user_id, pincode, age)
+    if ret > 1:
+        response = 'Failed to register request, please try again.'
+    elif ret == 1:
+        response = 'You can only have 4 registered requests at a time.'
+    else:
+        log(user_id, INFO, f'Request registered.')
+        response = f'Your request has been registered.\n' \
+                    f'You will be notified when vaccine is available in area with ' \
+                    f'pincode {pincode}.'
+
+    # Sending two messages here, this is not good idea to do everywhere
+    send_message(user_id , response)                                            
+
+    pincode_info = dbHelper.get_pincode_info(pincode)
+    response_type, response = check_slot_get_response(pincode_info, pincode, age)
+    
+    for res in response:
+        send_message(user_id , response)                                                    
+        time.sleep(2)
+
+    # Updating notification state for this user so that notifier module doesn't send
+    # notifications to this user immediately
+    log(user_id, DEBUG, f'Updating notification state, type [{response_type}]')
+    dbHelper.update_user_info_set(user_id, {
+        f'notificationState.{pincode}_{age}': {
+            'timestamp': datetime.utcnow(),
+            'type': response_type
+        }
+    })       
+    
+    return ConversationHandler.END 
+
+@send_typing_action
+def stop(update, context) :
+    user_id = update.effective_chat.id
+    user_requests = dbHelper.get_requests(user_id)
+    if len(user_requests) > 0:
+        ret = dbHelper.remove_all_requests(user_id)
+        if ret > 0:
+            response = 'Operation failed, please try again\.'
+        else:
+            response = 'You will not receive notifications\.'
+    else:
+        response = """You are not subscribed to notifications\.
+To register\, click this   \-\-\-\>   */request*"""
+
 
     if type(response) == str and len(response) > 0:
         log(user_id, INFO, f'Final response sent.')
         log(user_id, DATA, response)
-        context.bot.send_message(chat_id=user_id, text=response)
+        context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2, chat_id=user_id, text=response)
+
+@send_typing_action
+def exit_request(update, context) :
+    user_id = update.effective_chat.id
+    response = """Exited\!
+To see all valid commands\,
+click this       \-\-\-\>       */commands*"""
+    send_messageMD2(user_id , response) 
+
+
+@send_typing_action
+def list(update, context) :
+    user_id = update.effective_chat.id
+    user_requests = dbHelper.get_requests(user_id)
+    if len(user_requests) > 0:
+        response = "__List of your requests :\-__\n" 
+        for i, val in enumerate(user_requests, 1):
+            if val[1] == 46 :
+                age =  '45\+'
+            else :
+                age = '18\+' 
+            response += f"\n{i}\. Pincode : {val[0]}\,  Age : {age}"
+            response = response.strip()
+        response += """\n\nTo see all commands\,
+click this   \-\-\-\>   */commands*"""  
+    else:
+        response = """You have no registered requests\.
+
+To register\, click this   \-\-\-\>   */request*"""
+
+
+    if type(response) == str and len(response) > 0:
+        log(user_id, INFO, f'Final response sent.')
+        log(user_id, DATA, response)
+        context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2, chat_id=user_id, text=response)
+
+@send_typing_action
+def commands(update, context) :
+    user_id = update.effective_chat.id
+
+    command_text = """__List of Commands__ :\-
+
+1 \- To start receiving notifications\,
+          __click this__      \-\-\-\>       */request* \.
+
+2 \- To stop receiving notifications\,
+          __click this__      \-\-\-\>       */stop* \.
+
+3 \- To list all your requests\,
+          __click this__      \-\-\-\>       */list* \.
+
+``` You may also type these clickable commands instead\.```
+"""
+    context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id=user_id, text=command_text)
+
+@send_typing_action
+def invalid_command(update, context):
+    user_id = update.effective_chat.id
+    response = """Invalid command \!  To see all valid commands\,
+click this   \-\-\-\>   */commands*"""
+    context.bot.send_message(parse_mode = ParseMode.MARKDOWN_V2,chat_id=user_id, text = response)
+
+"""
+def show_more(update, context) :
+    response = show_more                                # To be completed when /show more will be eanabled
+    user_id = update.effective_chat.id
+    x = dbHelper.get_user_info(user_id)
+    print('not printed'*100,x, "printed" * 100)
+"""
 
 
 if __name__ == '__main__':
+
     updater = Updater(token=token, use_context=True)
     dispatcher = updater.dispatcher
 
-    start_handler = CommandHandler('start', start)
+    start_handler = CommandHandler('start', start)                  # Start command
     dispatcher.add_handler(start_handler)
 
-    echo_handler = MessageHandler(Filters.text & (~Filters.command), text_commands)
+    #show_more_handler = CommandHandler('show', show_more)                  #show_more command Complete LATER
+    #dispatcher.add_handler(show_more_handler)
+
+    stop_handler = CommandHandler('stop', stop)                     # Stop command
+    dispatcher.add_handler(stop_handler)
+
+    list_handler = CommandHandler('list', list)                     # List requests
+    dispatcher.add_handler(list_handler)
+
+    command_list_handler = CommandHandler('commands',commands)                    
+    dispatcher.add_handler(command_list_handler)
+
+
+
+
+    # Conversation Handler
+
+
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler('request', request)],
+        states={
+            AGE : [MessageHandler(filters=Filters.text & (~Filters.command), callback = age, pass_user_data=True)],   
+           REQUEST: [CallbackQueryHandler(final, pass_user_data=True)]
+        },
+        fallbacks=[MessageHandler(Filters.text & (~Filters.command), button_not_pressed),CommandHandler('exit', exit_request),CommandHandler('request', request) ],
+    )
+
+    dispatcher.add_handler(conversation_handler)
+
+
+    echo_handler = MessageHandler(Filters.text, invalid_command)
     dispatcher.add_handler(echo_handler)
+
 
     updater.start_polling()
 

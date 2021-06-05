@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 
 import telebot
 from customLogging import get_logger, INFO, DEBUG, DATA, WARNING
@@ -9,6 +10,7 @@ from util import get_key
 
 logger = get_logger('notifier', path=root_dir, log_level=5)
 
+#show_more_param = []
 
 def send_notification(
         user_id,
@@ -22,6 +24,11 @@ def send_notification(
         min_time_diff_btw_pos=12 * 3600,
         min_time_diff_btw_neg=24 * 3600
 ):
+    global show_more_param
+    if age == 46 :
+        age = '45+'
+    else :
+        age = '18+'    
     curr_time = datetime.utcnow()
 
     notification_state = get_key(user_info, ['notificationState', f'{pincode}_{age}'], {})
@@ -32,11 +39,12 @@ def send_notification(
         logger.log(DEBUG, f'Slots found for user [{user_id}], pincode [{pincode}], age [{age}].')
         logger.log(DATA, response)
 
-        if len(response) > 1:
-            message = f"You have slots available in pincode area {pincode}, for {age} year olds, use command 'request {pincode} {age}' to check centers."
+        if len(response) > 1:                           ### Change THIS   |||||||
+            #user_id, pincode , age = show_more_param[0], show_more_param[1], show_more_param[2]  #use when show more is implemented
+            message = "Slots Available !"
+            
         elif len(response) > 0:
-            message = f"You have slots available in pincode area {pincode}, for {age} year olds." \
-                      f"\n\n{response[0]}"
+            message = f"You have slots available in pincode area {pincode}, for {age} year olds." 
         else:
             logger.log(WARNING, '******** Impossible event, debug immediately. ********')
             return None, None
@@ -82,17 +90,22 @@ def send_notification(
     if notify:
         logger.log(INFO, f'Notifying user [{user_id}], message [{message}].')
 
-        telebot.send_message(user_id, message)
+        if message == "Slots Available !" : 
+            telebot.send_message(user_id, message)
 
-        dbHelper.update_user_info_set(user_id, {
-            f'notificationState.{pincode}_{age}': {
-                'timestamp': curr_time,
-                'type': notification_type
-            }
-        })
+            for res in response :
+                telebot.send_message(user_id, res)
+        else :
+            dbHelper.update_user_info_set(user_id, {
+                f'notificationState.{pincode}_{age}': {
+                    'timestamp': curr_time,
+                    'type': notification_type
+                }
+            })
 
         return notification_type, curr_time
 
     else:
         logger.log(INFO, f'Not notifying user [{user_id}].')
         return None, None
+
