@@ -10,7 +10,7 @@ from util import get_key
 
 logger = get_logger('notifier', path=root_dir, log_level=5)
 
-show_more_param = []
+#show_more_param = []
 
 def send_notification(
         user_id,
@@ -108,5 +108,4 @@ def send_notification(
     else:
         logger.log(INFO, f'Not notifying user [{user_id}].')
         return None, None
-
 
